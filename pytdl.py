@@ -8,7 +8,6 @@ from ctypes import windll
 from pprint import pprint
 from pathlib import Path
 from time import sleep
-from slh import yesno
 from os import system
 from tqdm import tqdm
 from sys import argv
@@ -17,10 +16,17 @@ import platform
 
 SHOULD_ASCII = False
 set_title = windll.kernel32.SetConsoleTitleW
-clid = "d5w7nooh6i5yqpw187kj7p3n7twbfp"
 
 def argn(n: int):
   return argv[argv.index(n) + 1]
+
+def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
+  "Keep asking until they say yes or no"
+  while True:
+    reply = input(f"{msg} [y/N]: ").strip().lower()
+    if reply in (yes_list if replace_lists else {"y", "ye", "yes"} | yes_list) or (accept_return and reply == ""):
+      return True
+    if reply in (no_list if replace_lists else {"n", "no"} | no_list): return False
 
 def cleanurl(url: str):
   "Just performs cleaning/fixing as is useful for ytdl/recording."
