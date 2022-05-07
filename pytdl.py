@@ -57,6 +57,7 @@ class PYTdl(Cmd):
   default_file, history_file = "pyt_queue.txt", "pyt_history.txt"
   formats = set(["yt", "tw", "sub"])
   redirect = {"yt": "yt.bat", "tw": "tw.bat", "sub": "sub.bat"}
+  sleepy = 10
   
   def expected(self, url: str):
     url = cleanurl(url)
@@ -101,6 +102,11 @@ class PYTdl(Cmd):
     "Toggle whether the downloader is quiet or not"
     self.quiet = not self.quiet
     print("Shh" if self.quiet else "BOO!")
+  
+  def do_sleepy(self, arg: str):
+    "How long do we sleep for (on average)?"
+    self.sleepy = int(arg)
+    print(f"We sleep for {self.sleepy}s on average.")
   
   def do_print(self, arg: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
@@ -238,7 +244,7 @@ class PYTdl(Cmd):
       print(f"Getting {len(self.queue)} video{plural(self.queue)}")
       try:
         for url in tqdm(self.queue, ascii = SHOULD_ASCII, ncols = 100, unit = "vid"):
-          sleep(sum([randint(0, 3) for _ in range(randint(1, 4))]) + random())
+          sleep(randint(0, self.sleepy*2) + random())
           live += self.do_get(url, True)
       except KeyboardInterrupt:
         print()
