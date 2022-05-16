@@ -318,7 +318,7 @@ class PYTdl(Cmd):
   def do_cleading(self, arg = ""):
     "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching './Videos/Shows/', otherwise provide an argument for the path."
     path = len(arg.strip) if len(arg.strip()) else Path("./Videos/Shows/")
-    vids = list(filter(Path.is_file, path.rglob("*.mkv")))
+    vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
         vid.rename(vid.parent / vid.name.removeprefix("0 "))
