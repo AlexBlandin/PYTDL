@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-import os
 from pathlib import Path
 from pprint import pprint
 from subprocess import run
 
-def merge_subs():
+def merge_subs(path = Path("~/Videos/")):
   "A handy utility to merge enUS.ass subtitles into an mp4 video non-destructively (aka, switch to mkv)"
-  vids, subs = list(filter(Path.is_file, Path().glob("*.mp4"))), list(filter(Path.is_file, Path().glob("*.ass")))
-  pair = { # only supports .mp4 + .enUS.ass
+  vids, subs = list(filter(Path.is_file, path.rglob("*.mp4"))), list(filter(Path.is_file, path.rglob("*.ass")))
+  pair = { # only supports .mp4 + .enUS.ass, quadratic because I'm lazy
     vid: sub
     for vid in vids for sub in subs if vid.stem == sub.stem.removesuffix(".enUS")
   }
@@ -23,11 +22,11 @@ def merge_subs():
         break
     else:
       continue # couldn't merge
-    if Path(f"{vid.stem}.mkv").is_file():
-      try: # we fail to unlink if, say, someone is already watching it!
+    if (vid.parent/ f"{vid.stem}.mkv").is_file():
+      try:
         vid.unlink()
         sub.unlink()
-      except:
+      except: # we fail to unlink if, say, someone is already watching it!
         pass
 
 if __name__ == "__main__":

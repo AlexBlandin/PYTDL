@@ -14,6 +14,8 @@ from sys import argv
 from cmd import Cmd
 import platform
 
+from pytdl.merge_subs import merge_subs
+
 SHOULD_ASCII = False
 set_title = windll.kernel32.SetConsoleTitleW
 
@@ -230,7 +232,7 @@ class PYTdl(Cmd):
     self.update_got()
     return live
   
-  def do_getall(self, arg: str = ""):
+  def do_getall(self, arg = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
     set_title(f"pYT dl: organising queue")
     arg, live = arg.strip(), []
@@ -255,7 +257,7 @@ class PYTdl(Cmd):
       print("No videos in the queue")
     if len(live): self.do_wait(" ".join(live))
   
-  def do_load(self, arg: str = ""):
+  def do_load(self, arg = ""):
     "Load the contents of a file into the queue (add a ! after to not load the history): load [file] | : [file] | :! [file]"
     path, pre, get_history = arg.strip(), len(self.queue), True
     if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
@@ -269,7 +271,7 @@ class PYTdl(Cmd):
       self.update_got()
     set_title(f"pYT dl: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
-  def do_save(self, arg: str = ""):
+  def do_save(self, arg = ""):
     "Save the queue to a file (add a ! after to not save the history): save [file] | # [file] | #! [file]"
     set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
@@ -281,7 +283,7 @@ class PYTdl(Cmd):
         o.write("".join(f"{url}\n" for url in queue if url not in self.got))
     if get_history: self.update_got()
   
-  def do_wait(self, arg: str = ""):
+  def do_wait(self, arg = ""):
     "Wait on a currently live video, checking in increasing intervals from 10s to 10mins (no argument waits on queue): wait [url] | wait [url] [url] [url] | wait"
     urls, i = cleanurls(arg), 0
     if len(arg) == 0 or len(urls) == 0: urls = list(self.queue)
@@ -307,6 +309,11 @@ class PYTdl(Cmd):
         self.do_get(url)
         elp, i = 0, 0 # reset since we just spent a chunk of time downloading
   
+  def do_merge(self, arg = ""):
+    "Merge subtitles within a given directory, recursively. Defaults to ~/Videos/"
+    path = len(arg.strip) if len(arg.strip()) else Path("~/Videos/")
+    merge_subs(path)
+  
   def do_idle(self, arg = None):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
     self.idle = not self.idle
@@ -329,7 +336,7 @@ class PYTdl(Cmd):
     print(f"History: {self.history_file}")
     print(f"Download Formats: {', '.join(self.formats)}")
   
-  def do_exit(self, arg: str = ""):
+  def do_exit(self, arg = ""):
     "Exit pyt-dl"
     self.do_save(arg)
     set_title(f"pYT dl: exitting")
