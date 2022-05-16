@@ -311,13 +311,13 @@ class PYTdl(Cmd):
         elp, i = 0, 0 # reset since we just spent a chunk of time downloading
   
   def do_merge(self, arg = ""):
-    "Merge subtitles within a given directory, recursively. Defaults to ~/Videos/"
-    path = len(arg.strip) if len(arg.strip()) else Path("~/Videos/")
+    "Merge subtitles within a given directory, recursively. Defaults to searching './Videos/', otherwise provide an argument for the path."
+    path = len(arg.strip) if len(arg.strip()) else Path("./Videos/")
     merge_subs(path)
   
   def do_cleading(self, arg = ""):
-    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season."
-    path = len(arg.strip) if len(arg.strip()) else Path("~/Videos/Shows/")
+    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching './Videos/Shows/', otherwise provide an argument for the path."
+    path = len(arg.strip) if len(arg.strip()) else Path("./Videos/Shows/")
     vids = list(filter(Path.is_file, path.rglob("*.mkv")))
     for vid in vids:
       if vid.name.startswith("0 "):
