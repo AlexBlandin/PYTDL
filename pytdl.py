@@ -14,7 +14,7 @@ from sys import argv
 from cmd import Cmd
 import platform
 
-from pytdl.merge_subs import merge_subs
+from merge_subs import merge_subs
 
 SHOULD_ASCII = False
 set_title = windll.kernel32.SetConsoleTitleW
@@ -313,6 +313,14 @@ class PYTdl(Cmd):
     "Merge subtitles within a given directory, recursively. Defaults to ~/Videos/"
     path = len(arg.strip) if len(arg.strip()) else Path("~/Videos/")
     merge_subs(path)
+  
+  def do_cleading(self, arg = ""):
+    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season."
+    path = len(arg.strip) if len(arg.strip()) else Path("~/Videos/")
+    vids = list(filter(Path.is_file, path.rglob("*.mkv")))
+    for vid in vids:
+      if vid.name.startswith("0 "):
+        vid.rename(vid.parent / vid.name.removeprefix("0 "))
   
   def do_idle(self, arg = None):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
