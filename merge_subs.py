@@ -5,11 +5,14 @@ from subprocess import run
 
 def merge_subs(path = Path("./Videos/")):
   "A handy utility to merge enUS.ass subtitles into an mp4 video non-destructively (aka, switch to mkv)"
-  vids, subs = list(filter(Path.is_file, path.rglob("*.mp4"))), list(filter(Path.is_file, path.rglob("*.ass")))
-  pair = { # only supports .mp4 + .enUS.ass, quadratic because I'm lazy
-    vid: sub
-    for vid in vids for sub in subs if vid.stem == sub.stem.removesuffix(".enUS")
-  }
+  vids = list(filter(Path.is_file, path.rglob("*.mp4")))
+  subs = list(filter(lambda p: p.stem.endswith(".enUS"), filter(Path.is_file, path.rglob("*.ass"))))
+  pair = {vid: None for vid in vids}
+  for sub in subs:
+    v = sub.stem.removesuffix(".enUS")
+    if v in pair:
+      pair[v] = sub
+  pair = {vid: sub for vid, sub in pair.items() if sub is not None}
   for vid, sub in pair.items():
     for _ in range(2): # how many tries
       if (
@@ -22,7 +25,7 @@ def merge_subs(path = Path("./Videos/")):
         break
     else:
       continue # couldn't merge
-    if (vid.parent/ f"{vid.stem}.mkv").is_file():
+    if (vid.parent / f"{vid.stem}.mkv").is_file():
       try:
         vid.unlink()
         sub.unlink()
