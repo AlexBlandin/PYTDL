@@ -3,7 +3,7 @@ from pathlib import Path
 from pprint import pprint
 from subprocess import run
 
-def merge_subs(path = Path("./Videos/")):
+def merge_subs(path = Path()):
   "A handy utility to merge enUS.ass subtitles into an mp4 video non-destructively (aka, switch to mkv)"
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(lambda p: p.stem.endswith(".enUS"), filter(Path.is_file, path.rglob("*.ass"))))

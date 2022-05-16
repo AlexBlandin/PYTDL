@@ -312,7 +312,7 @@ class PYTdl(Cmd):
   
   def do_merge(self, arg = ""):
     "Merge subtitles within a given directory, recursively. Defaults to searching './Videos/', otherwise provide an argument for the path."
-    path = len(arg.strip) if len(arg.strip()) else Path("./Videos/")
+    path = Path(arg.strip()) if len(arg.strip()) else Path("./Videos/")
     merge_subs(path)
   
   def do_cleading(self, arg = ""):
