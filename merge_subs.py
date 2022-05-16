@@ -9,7 +9,7 @@ def merge_subs(path = Path()):
   subs = list(filter(lambda p: p.stem.endswith(".enUS"), filter(Path.is_file, path.rglob("*.ass"))))
   pair = {vid: None for vid in vids}
   for sub in subs:
-    v = sub.stem.removesuffix(".enUS")
+    v =  sub.parent / (sub.stem.removesuffix(".enUS") + ".mp4")
     if v in pair:
       pair[v] = sub
   pair = {vid: sub for vid, sub in pair.items() if sub is not None}
@@ -17,7 +17,7 @@ def merge_subs(path = Path()):
     for _ in range(2): # how many tries
       if (
         r := run(
-          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language=eng" "{vid.stem}.mkv" '
+          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language=eng" "{str(vid).removesuffix(".mp4")}.mkv" '
         )
       ).returncode:
         pprint(r)
