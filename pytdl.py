@@ -315,7 +315,7 @@ class PYTdl(Cmd):
     path = Path(arg.strip()) if len(arg.strip()) else Path("./Videos/")
     merge_subs(path)
   
-  def do_cleading(self, arg = ""):
+  def do_clean(self, arg = ""):
     "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching './Videos/Shows/', otherwise provide an argument for the path."
     path = len(arg.strip) if len(arg.strip()) else Path("./Videos/Shows/")
     vids = list(filter(Path.is_file, path.rglob("*")))
