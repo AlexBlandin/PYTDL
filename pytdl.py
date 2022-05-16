@@ -106,8 +106,9 @@ class PYTdl(Cmd):
     print("Shh" if self.quiet else "BOO!")
   
   def do_sleepy(self, arg: str):
-    "How long do we sleep for (on average)?"
+    "How long do we sleep for (on average)? There is a lower bound of 5s."
     self.sleepy = int(arg)
+    if self.sleepy < 5: self.sleepy = 5
     print(f"We sleep for {self.sleepy}s on average.")
   
   def do_print(self, arg: str):
@@ -246,7 +247,7 @@ class PYTdl(Cmd):
       print(f"Getting {len(self.queue)} video{plural(self.queue)}")
       try:
         for url in tqdm(self.queue, ascii = SHOULD_ASCII, ncols = 100, unit = "vid"):
-          sleep(randint(0, self.sleepy*2) + random())
+          sleep(randint(5, self.sleepy*2) + random())
           live += self.do_get(url, True)
       except KeyboardInterrupt:
         print()
