@@ -58,7 +58,7 @@ class PYTdl(Cmd):
   queue, got, interpret, forced, idle, quiet = {}, set(), None, False, True, False
   default_file, history_file = "pyt_queue.txt", "pyt_history.txt"
   formats = set(["yt", "tw", "sub"])
-  redirect = {"yt": "yt.bat", "tw": "tw.bat", "sub": "sub.bat"}
+  redirect = {"yt": "yt.bat", "tw": "tw.bat", "sub": "sub.bat", "list": "list.bat"}
   sleepy = 10
   
   def expected(self, url: str):
@@ -66,6 +66,8 @@ class PYTdl(Cmd):
     # TODO: use a mapping or dictionary setup to self.formats
     if self.interpret is not None:
       return self.interpret
+    if "playlist" in url:
+      return "list"
     if "crunchyroll" in url:
       return "sub"
     elif "twitch.tv" in url:
