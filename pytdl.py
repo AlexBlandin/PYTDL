@@ -62,6 +62,7 @@ class PYTdl(Cmd):
   sleepy = 10
   
   def expected(self, url: str):
+    "Expected redirect for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     url = cleanurl(url)
     # TODO: use a mapping or dictionary setup to self.formats
     if self.interpret is not None:
@@ -218,7 +219,7 @@ class PYTdl(Cmd):
     start = "\r" if looping else ""
     live = []
     for url in cleanurls(arg):
-      if len(url) and (url not in self.got or (not self.idle and yesno(f"{start}Try download {url} again?"))):
+      if len(url) and (url not in self.got or (not self.idle and yesno(f"{start}Try download {url} again?"))) or self.expected(url) in {"list"}:
         exp = self.expected(url)
         set_title(f"pYT dl: [{exp}] {url}")
         if self.live(url) and (self.idle or yesno(f"{start}Currently live, shall we skip and try again later?")):
