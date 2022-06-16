@@ -58,7 +58,7 @@ class PYTdl(Cmd):
   queue, got, interpret, forced, idle, quiet = {}, set(), None, False, True, False
   default_file, history_file = "pyt_queue.txt", "pyt_history.txt"
   formats = set(["yt", "tw", "sub"])
-  redirect = {"yt": "yt.bat", "tw": "tw.bat", "sub": "sub.bat", "list": "list.bat"}
+  redirect = {r: str((Path(__file__) / (r + ".bat")).resolve()) for r in ["yt", "tw", "sub", "list"]}
   sleepy = 10
   
   def expected(self, url: str):
@@ -81,7 +81,7 @@ class PYTdl(Cmd):
       url = cleanurl(url)
       exp = self.expected(url)
       if exp in ["tw", "yt"]: # this is atrocious, too bad!
-        r = run([f"{self.redirect[exp]}", url, "-j"], capture_output = True).stdout.decode("utf-8")
+        r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
         if len(r):
           j = load_json(r)
           if "is_live" in j:
@@ -132,7 +132,7 @@ class PYTdl(Cmd):
     "Print info about a video: info [url]"
     url = cleanurl(url)
     exp = self.expected(url)
-    r = run([f"{self.redirect[exp]}", url, "-j"], capture_output = True).stdout.decode("utf-8")
+    r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
     if len(r):
       j = ""
       try:
@@ -204,7 +204,7 @@ class PYTdl(Cmd):
         if self.live(url):
           live.append(url)
           continue
-        if (r := run([f"{self.redirect[exp]}", url] + (["-q"] * self.quiet))).returncode:
+        if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
           print()
           pprint(r)
           if not self.idle and yesno(f"Did {url} download properly?"): self.got.add(url)
@@ -219,13 +219,16 @@ class PYTdl(Cmd):
     start = "\r" if looping else ""
     live = []
     for url in cleanurls(arg):
-      if len(url) and (url not in self.got or (not self.idle and yesno(f"{start}Try download {url} again?"))) or self.expected(url) in {"list"}:
+      if len(url) and (url not in self.got or
+                       (not self.idle and yesno(f"{start}Try download {url} again?"))) or self.expected(url) in {
+                         "list"
+                       }:
         exp = self.expected(url)
         set_title(f"pYT dl: [{exp}] {url}")
         if self.live(url) and (self.idle or yesno(f"{start}Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
-        if (r := run([f"{self.redirect[exp]}", url] + (["-q"] * self.quiet))).returncode:
+        if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
           print()
           pprint(r)
           if not self.idle and yesno(f"{start}Did {url} download properly?"): self.got.add(url)
@@ -250,7 +253,7 @@ class PYTdl(Cmd):
       print(f"Getting {len(self.queue)} video{plural(self.queue)}")
       try:
         for url in tqdm(self.queue, ascii = SHOULD_ASCII, ncols = 100, unit = "vid"):
-          sleep(randint(5, self.sleepy*2) + random())
+          sleep(randint(5, self.sleepy * 2) + random())
           live += self.do_get(url, True)
       except KeyboardInterrupt:
         print()
