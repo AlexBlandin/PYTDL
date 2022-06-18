@@ -1,9 +1,7 @@
-from humanize import naturalsize, naturaltime
-from requests import get as request
 from json import loads as load_json
 from random import random, randint
-from bs4 import BeautifulSoup
-from subprocess import run
+from humanize import naturaltime
+from yt_dlp import YoutubeDL
 from ctypes import windll
 from pprint import pprint
 from pathlib import Path
