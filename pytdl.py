@@ -29,7 +29,7 @@ class PYTdl(Cmd):
   prompt = "pyt-dl> "
   queue, got = {}, set(),
   forced, idle, ascii = False, True, False # behaviour switches
-  sleepy = 10 # typical sleep duration between queued urls.
+  sleepy, start = 10, ""
   local = Path(__file__)
   default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
@@ -65,30 +65,37 @@ class PYTdl(Cmd):
   }
   set_title = windll.kernel32.SetConsoleTitleW
   
-  def expected(self, url: str):
-    "Expected redirect for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
-    # TODO: a better system
-    if "playlist" in url:
-      return "list"
-    if "crunchyroll" in url:
-      return "sub"
-    elif "twitch.tv" in url:
-      return "tw"
+  def config(self, url: str):
+    "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
+    return {
+      **(
+        self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["yt"]
+      ),
+      **self.conf["quiet"],
+      **self.conf["default"]
+    }
+  
+  def download(self, url: str):
+    # **self.conf["quiet"]
+    with YoutubeDL(self.config(url)) as ydl:
+      r = ydl.download(url)
+    if r: #(r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
+      # print()
+      # pprint(r)
+      if not self.idle and yesno(f"{self.start}Did {url} download properly?"): self.got.add(url)
     else:
-      return "yt"
+      self.got.add(url)
+  
+  def info(self, url: str):
+    # TODO: is "forcejson" better than dump single json?
+    with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
+      return ydl.extract_info(url, download = False)
   
   def live(self, url: str) -> bool:
     try:
-      exp = self.expected(url)
-      if exp in ["tw", "yt"]: # this is atrocious, too bad!
-        # TODO: "forcejson", then "is_live" in j etc still works?
-        # with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
-        #   j = ydl.extract_info(url, download = False)
-        r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
-        if len(r):
-          j = load_json(r)
-          if "is_live" in j:
-            return j["is_live"]
+      info = self.info(url)
+      if "is_live" in info:
+        return info["is_live"]
     except:
       pass
     return False
@@ -126,31 +133,24 @@ class PYTdl(Cmd):
         for arg in args:
           if arg.isdecimal() or (len(arg) > 1 and arg[0] == "-" and arg[1:].isdecimal()):
             url = queue[int(arg)]
-            print(f"[{self.expected(url)}] {url}")
+            print(url)
       else:
         for url in queue:
-          print(f"[{self.expected(url)}] {url}")
+          print(url)
   
   def do_info(self, url: str):
     "Print info about a video: info [url]"
-    exp = self.expected(url)
-    r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
-    if len(r):
-      j = ""
-      try:
-        j = load_json(r)
-        print(f'Title: {j["fulltitle"]}')
-        print(f'URL: {url}')
-        print(f'Live? {"yes" if j["is_live"] else "no"}')
-        # print(f': {j[""]}')
-      except KeyError as err:
-        print(err)
-      except Exception as err:
-        print(err)
-        print(f"{r = }")
-        print(f"{j = }")
-        print(err)
-        raise err
+    info = self.info(url)
+    try:
+      print(f'Title: {info["fulltitle"]}')
+      print(f'URL: {url}')
+      print("Live" if info["is_live"] else "VOD")
+    except KeyError as err:
+      print(err)
+    except Exception as err:
+      print(info)
+      print(err)
+      raise err
   
   def do_add(self, arg: str):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
@@ -197,10 +197,9 @@ class PYTdl(Cmd):
         if self.live(url):
           live.append(url)
           continue
-        # **self.conf["quiet"]
-        if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
-          print()
-          pprint(r)
+        with YoutubeDL(self.config(url)) as ydl:
+          r = ydl.download(url) # 0 is fine, 1 is issue
+        if r:
           if not self.idle and yesno(f"Did {url} download properly?"): self.got.add(url)
         else:
           self.got.add(url)
@@ -210,31 +209,24 @@ class PYTdl(Cmd):
   
   def do_get(self, arg: str, looping: bool = False):
     "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
-    start = "\r" if looping else ""
+    self.start = "\r" if looping else ""
     live = []
     for url in cleanurls(arg):
       if len(url) and (url not in self.got or
-                       (not self.idle and yesno(f"{start}Try download {url} again?"))) or self.expected(url) in {
+                       (not self.idle and yesno(f"{self.start}Try download {url} again?"))) or self.expected(url) in {
                          "list"
                        }:
-        exp = self.expected(url)
-        self.set_title(f"pYT dl: [{exp}] {url}")
-        if self.live(url) and (self.idle or yesno(f"{start}Currently live, shall we skip and try again later?")):
+        self.set_title(f"pYT dl: {url}")
+        if self.live(url) and (self.idle or yesno(f"{self.start}Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
-        # **self.conf["quiet"]
-        if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
-          print()
-          pprint(r)
-          if not self.idle and yesno(f"{start}Did {url} download properly?"): self.got.add(url)
-        else:
-          self.got.add(url)
+        self.download(url)
       if url == ".":
         self.do_getall()
     self.update_got()
     return live
   
-  def do_getall(self, arg = ""):
+  def do_getall(self, arg: str = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
     self.set_title(f"pYT dl: organising queue")
     arg, live = arg.strip(), []
@@ -259,7 +251,7 @@ class PYTdl(Cmd):
       print("No videos in the queue")
     if len(live): self.do_wait(" ".join(live))
   
-  def do_load(self, arg = ""):
+  def do_load(self, arg: str = ""):
     "Load the contents of a file into the queue (add a ! after to not load the history): load [file] | : [file] | :! [file]"
     path, pre, get_history = arg.strip(), len(self.queue), True
     if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
@@ -273,7 +265,7 @@ class PYTdl(Cmd):
       self.update_got()
     self.set_title(f"pYT dl: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
-  def do_save(self, arg = ""):
+  def do_save(self, arg: str = ""):
     "Save the queue to a file (add a ! after to not save the history): save [file] | # [file] | #! [file]"
     self.set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
@@ -285,7 +277,7 @@ class PYTdl(Cmd):
         o.write("".join(f"{url}\n" for url in queue if url not in self.got))
     if get_history: self.update_got()
   
-  def do_wait(self, arg = ""):
+  def do_wait(self, arg: str = ""):
     "Wait on a currently live video, checking in increasing intervals from 10s to 10mins (no argument waits on queue): wait [url] | wait [url] [url] [url] | wait"
     urls, i = cleanurls(arg), 0
     if len(arg) == 0 or len(urls) == 0: urls = list(self.queue)
@@ -311,12 +303,12 @@ class PYTdl(Cmd):
         self.do_get(url)
         elp, i = 0, 0 # reset since we just spent a chunk of time downloading
   
-  def do_merge(self, arg = ""):
+  def do_merge(self, arg: str = ""):
     "Merge subtitles within a given directory, recursively. Defaults to searching './Videos/', otherwise provide an argument for the path."
     path = Path(arg.strip()) if len(arg.strip()) else Path("./Videos/")
     merge_subs(path)
   
-  def do_clean(self, arg = ""):
+  def do_clean(self, arg: str = ""):
     "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching './Videos/Shows/', otherwise provide an argument for the path."
     path = len(arg.strip) if len(arg.strip()) else Path("./Videos/Shows/")
     vids = list(filter(Path.is_file, path.rglob("*")))
@@ -330,7 +322,7 @@ class PYTdl(Cmd):
     print("Idling" if self.idle else "Interactive")
   
   def do_IDLE(self, arg = None):
-    self.do_idle(arg)
+    self.do_idle()
   
   def do_clear(self, arg = None):
     if platform.system() == "Windows":
@@ -346,7 +338,7 @@ class PYTdl(Cmd):
     print(f"History: {self.history_file}")
     print(f"Download Formats: {', '.join(self.formats)}")
   
-  def do_exit(self, arg = ""):
+  def do_exit(self, arg: str = ""):
     "Exit pyt-dl"
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
@@ -367,7 +359,8 @@ class PYTdl(Cmd):
   def default(self, arg: str):
     arg = arg.strip()
     op, arg = arg[0], arg[1:].strip()
-    if op == ".": # TODO: do a better job than this, come up with a general operator system (multi-char + multi-op + infix)
+    # come up with a general operator system? multi-char + multi-op + infix
+    if op == ".": # TODO: improve
       self.do_getall(arg)
     elif op == "!":
       self.do_get(arg)
