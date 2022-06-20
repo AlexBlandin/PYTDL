@@ -55,7 +55,7 @@ class PYTdl(Cmd):
       # "windowsfilenames": True
     }
   }
-
+  
   def yesno(self, msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
     "Keep asking until they say yes or no"
     while True:
@@ -63,7 +63,6 @@ class PYTdl(Cmd):
       if reply in (yes_list if replace_lists else {"y", "ye", "yes"} | yes_list) or (accept_return and reply == ""):
         return True
       if reply in (no_list if replace_lists else {"n", "no"} | no_list): return False
-
   
   def config(self, url: str):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
@@ -314,7 +313,7 @@ class PYTdl(Cmd):
         try:
           sleep(w + randint(0, w // 3) + random()) # w/ jitter
         except KeyboardInterrupt:
-          if not self.yesno("Test if the video is live right now?") and not self.yesno("Do you want to continue waiting?"):
+          if not self.yesno("Test if the video is live now?") and not self.yesno("Do you want to continue waiting?"):
             break
         if self.live(url):
           urls.append(url)
