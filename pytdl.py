@@ -131,6 +131,7 @@ class PYTdl(Cmd):
     print(f"We sleep for {self.sleepy}s on average.")
   
   def do_res(self, arg: str):
+    "Provide a maximum resolution to download to, or nothing to remove the limit: res | res 1080C"
     if len(arg.strip()):
       self.maxres = int(arg)
     else:
