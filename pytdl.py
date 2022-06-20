@@ -96,7 +96,7 @@ class PYTdl(Cmd):
     return False
   
   def readfile(self, path: str = ""):
-    if len(path) == 0: path = self.default_file
+    if len(str(path)) == 0: path = self.default_file
     if (f := Path(path)).is_file():
       with open(f) as o:
         return list(filter(None, map(str.strip, o.readlines())))
@@ -104,9 +104,10 @@ class PYTdl(Cmd):
   
   def update_got(self):
     self.got |= set(self.readfile(self.history_file))
-    with open(self.history_file, mode = "w") as o:
-      for url in list(self.got):
-        o.write(f"{url}\n")
+    if Path(self.history_file).is_file():
+      with open(self.history_file, mode = "w") as o:
+        for url in list(self.got):
+          o.write(f"{url}\n")
   
   def do_quiet(self, arg: str):
     "Toggle whether the downloader is quiet or not"
@@ -268,7 +269,7 @@ class PYTdl(Cmd):
     if len(path) == 0: path = self.default_file
     if len(lines := self.readfile(path)): queue |= {line: line for line in lines if line not in self.got}
     if len(queue):
-      with open(path, mode = "w") as o:
+      with open(path, mode = "w+") as o:
         o.write("".join(f"{url}\n" for url in queue if url not in self.got))
     if get_history: self.update_got()
   
@@ -329,9 +330,6 @@ class PYTdl(Cmd):
     "Prints details about the mode of operation and system."
     print(f"Mode: {'Idle' if self.idle else 'Interactive'}")
     print(f"OS: {platform.system()}")
-    print(f"Queue: {self.default_file}")
-    print(f"History: {self.history_file}")
-    print(f"Download Formats: {', '.join(self.formats)}")
   
   def do_exit(self, arg: str = ""):
     "Exit pyt-dl"
