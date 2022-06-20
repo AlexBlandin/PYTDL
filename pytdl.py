@@ -7,7 +7,6 @@ from os import system
 from tqdm import tqdm
 from cmd import Cmd
 import platform
-import os
 
 try:
   from ctypes import windll
@@ -28,7 +27,7 @@ class PYTdl(Cmd):
   local = Path(__file__).parent
   default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
-  set_title = windll.kernel32.SetConsoleTitleW if os.name == "nt" else id # use appropriate one
+  set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # use appropriate one
   conf = { # yt-dlp configurations
     "yt": {
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(title)s [%(id)s].%(ext)s")}
