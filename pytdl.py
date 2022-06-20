@@ -26,15 +26,18 @@ class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
   queue, got = {}, set(),
-  forced, idle, ascii, quiet = False, True, False, False # behaviour switches
+  forced, idle, ascii, quiet, dated = False, True, False, False, False # behaviour switches
   sleepy, start = 10, ""
-  local = Path(__file__)
+  local = Path(__file__).parent
   default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
   set_title = windll.kernel32.SetConsoleTitleW
   conf = { # yt-dlp configurations
     "yt": {
       "output": r"~\Videos\%(title)s [%(id)s].%(ext)s"
+    },
+    "dated": {
+      "output": r"~\Videos\%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
     },
     "tw": {
       "output":
@@ -64,7 +67,7 @@ class PYTdl(Cmd):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return {
       **(
-        self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["yt"]
+        self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["dated"] if self.dated else self.conf["yt"]
       ),
       **self.conf["quiet"],
       **self.conf["default"], "quiet":
@@ -113,6 +116,11 @@ class PYTdl(Cmd):
     "Toggle whether the downloader is quiet or not"
     self.quiet = not self.quiet
     print("Shh" if self.quiet else "BOO!")
+  
+  def do_dated(self, arg: str):
+    "Toggle whether the downloader dates videos by default"
+    self.dated = not self.dated
+    print("Dated" if self.dated else "Undated")
   
   def do_sleepy(self, arg: str):
     "How long do we sleep for (on average)? There is a lower bound of 5s."
@@ -265,8 +273,9 @@ class PYTdl(Cmd):
     "Save the queue to a file (add a ! after to not save the history): save [file] | # [file] | #! [file]"
     self.set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
-    if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
-    if len(path) == 0: path = self.default_file
+    if len(path) and path[0] == "!": path, get_history = Path(path[1:].strip()), False
+    elif len(path) == 0: path = self.default_file
+    else: path = Path(path)
     if len(lines := self.readfile(path)): queue |= {line: line for line in lines if line not in self.got}
     if len(queue):
       with open(path, mode = "w+") as o:
