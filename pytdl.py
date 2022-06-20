@@ -359,8 +359,8 @@ class PYTdl(Cmd):
   
   def do_mode(self, arg = None):
     "Prints details about the mode of operation and system."
-    yesify = lambda b: "yes" if b else "no"
-    print("Mode:", "idle" if self.idle else "interactive")
+    yesify = lambda b: "Yes" if b else "No"
+    print("Mode:", "Idle" if self.idle else "Interactive")
     print("OS:", platform.system())
     print("Forcing:", yesify(self.forced))
     print("Idling:", yesify(self.idle))
@@ -368,7 +368,7 @@ class PYTdl(Cmd):
     print("Quiet:", yesify(self.quiet))
     print("Dated:", yesify(self.dated))
     print("Sleep interval:", self.sleepy, "seconds")
-    print("Max resolution:", self.maxres if self.maxres else "unlimited")
+    print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
   
   def do_exit(self, arg: str = ""):
     "Exit pyt-dl"
