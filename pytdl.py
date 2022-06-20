@@ -45,7 +45,7 @@ class PYTdl(Cmd):
     "list": {
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")}
     },
-    "sub": {
+    "crunchy": {
       "subtitleslangs": ["enUS"],
       "writesubtitles": True,
       # "embed_subs": True,
@@ -67,7 +67,7 @@ class PYTdl(Cmd):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return {
       **(
-        self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["dated"] if self.dated else self.conf["yt"]
+        self.conf["list"] if "playlist" in url else self.conf["crunchy"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["dated"] if self.dated else self.conf["yt"]
       ),
       **self.conf["default"],
       **({
