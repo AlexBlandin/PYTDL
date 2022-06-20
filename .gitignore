@@ -1,3 +1,9 @@
+# PYTDL files
+queue.txt
+history.txt
+cookies/
+secrets/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

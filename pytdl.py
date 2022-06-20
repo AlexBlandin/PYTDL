@@ -8,17 +8,10 @@ from pathlib import Path
 from time import sleep
 from os import system
 from tqdm import tqdm
-from sys import argv
 from cmd import Cmd
 import platform
 
 from merge_subs import merge_subs
-
-SHOULD_ASCII = False
-set_title = windll.kernel32.SetConsoleTitleW
-
-def argn(n: int):
-  return argv[argv.index(n) + 1]
 
 def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
   "Keep asking until they say yes or no"
@@ -28,43 +21,53 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
       return True
     if reply in (no_list if replace_lists else {"n", "no"} | no_list): return False
 
-def cleanurl(url: str):
-  "Just performs cleaning/fixing as is useful for ytdl/recording."
-  url = url.strip()
-  us = url.split("://")
-  promotable = ["twitch.tv", "youtube.com", "youtu.be", "crunchyroll.com"]
-  promote = any([domain in url for domain in promotable])
-  protocol = "https" if promote or "s" in us[0] else "http"
-  url = f"{protocol}://{us[-1]}"
-  if url.startswith("https://youtu.be/"):
-    url = f"https://youtube.com/watch?v={url.removeprefix('https://youtu.be/')}"
-  return url
-
 def cleanurls(urls: str):
-  return list(map(cleanurl, urls.strip().split()))
-
-# Like str.join but works on normal iterables, just can't use the "".join(x for x in it) grammar trick if you want to change the sep
-def join(it, sep: str = " "):
-  return sep.join(map(str, it))
-
-def plural(arr) -> str:
-  return "s" if len(arr) != 1 else ""
+  return list(map(str.strip, urls.strip().split()))
 
 class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
-  queue, got, interpret, forced, idle, quiet = {}, set(), None, False, True, False
-  default_file, history_file = "pyt_queue.txt", "pyt_history.txt"
-  formats = set(["yt", "tw", "sub"])
-  redirect = {r: str((Path(__file__) / (r + ".bat")).resolve()) for r in ["yt", "tw", "sub", "list"]}
-  sleepy = 10
+  queue, got = {}, set(),
+  forced, idle, ascii = False, True, False # behaviour switches
+  sleepy = 10 # typical sleep duration between queued urls.
+  local = Path(__file__)
+  default_file, history_file = local / "queue.txt", local / "history.txt"
+  cookies, secrets = local / "cookies", local / "secrets"
+  conf = { # yt-dlp configurations
+    "yt": {
+      "output": r"~\Videos\%(title)s [%(id)s].%(ext)s"
+    },
+    "tw": {
+      "output":
+        r"~\Videos\Streams\%(uploader)s\%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|Unknown)s %(title)s.%(ext)s"
+    },
+    "list": {
+      "output": r"~\Videos\%(playlist_title)s\%(playlist_index)03d %(title)s.%(ext)s"
+    },
+    "sub": {
+      "sub-lang": "enUS",
+      "write-sub": True,
+      "embed-subs": True,
+      "output": r"~\Videos\Shows\%(series)s\%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s",
+      "cookies": cookies / "crunchy.txt"
+    },
+    "default": {
+      "rm-cache-dir": True,
+      "merge-output-format": "mkv",
+      "no-overwrites": True,
+      "fixup": "warn",
+      "retries": 20,
+      "fragment-retries": 20
+    },
+    "quiet": {
+      "quiet": False
+    }
+  }
+  set_title = windll.kernel32.SetConsoleTitleW
   
   def expected(self, url: str):
     "Expected redirect for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
-    url = cleanurl(url)
-    # TODO: use a mapping or dictionary setup to self.formats
-    if self.interpret is not None:
-      return self.interpret
+    # TODO: a better system
     if "playlist" in url:
       return "list"
     if "crunchyroll" in url:
@@ -76,9 +79,11 @@ class PYTdl(Cmd):
   
   def live(self, url: str) -> bool:
     try:
-      url = cleanurl(url)
       exp = self.expected(url)
       if exp in ["tw", "yt"]: # this is atrocious, too bad!
+        # TODO: "forcejson", then "is_live" in j etc still works?
+        # with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
+        #   j = ydl.extract_info(url, download = False)
         r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
         if len(r):
           j = load_json(r)
@@ -92,7 +97,7 @@ class PYTdl(Cmd):
     if len(path) == 0: path = self.default_file
     if (f := Path(path)).is_file():
       with open(f) as o:
-        return list(map(cleanurl, filter(None, map(str.strip, o.readlines()))))
+        return list(filter(None, map(str.strip, o.readlines())))
     return []
   
   def update_got(self):
@@ -103,8 +108,8 @@ class PYTdl(Cmd):
   
   def do_quiet(self, arg: str):
     "Toggle whether the downloader is quiet or not"
-    self.quiet = not self.quiet
-    print("Shh" if self.quiet else "BOO!")
+    self.conf["quiet"]["quiet"] = not self.conf["quiet"]["quiet"]
+    print("Shh" if self.conf["quiet"]["quiet"] else "BOO!")
   
   def do_sleepy(self, arg: str):
     "How long do we sleep for (on average)? There is a lower bound of 5s."
@@ -128,7 +133,6 @@ class PYTdl(Cmd):
   
   def do_info(self, url: str):
     "Print info about a video: info [url]"
-    url = cleanurl(url)
     exp = self.expected(url)
     r = run([self.redirect[exp], url, "-j"], capture_output = True).stdout.decode("utf-8")
     if len(r):
@@ -183,25 +187,17 @@ class PYTdl(Cmd):
     "Forget about which ones you've already gotten"
     self.got = set()
   
-  def do_as(self, arg: str):
-    "Interpret as a given download scheme: yt | tw | sub"
-    if len(exp := arg.strip()) and exp in self.formats:
-      self.interpret = exp
-      print(f"Using {exp} for now")
-    else:
-      self.interpret = None
-      print("Automatically detecting download scheme")
-  
   def do_force(self, arg: str):
     "Force idle/get/wait the video at a url (space separated for multiple): get [url] | ! [url] | ![url] | ![url] [url] [url]"
     live = []
     for url in cleanurls(arg):
       if len(url):
         exp = self.expected(url)
-        set_title(f"pYT dl: [{exp}] {url}")
+        self.set_title(f"pYT dl: [{exp}] {url}")
         if self.live(url):
           live.append(url)
           continue
+        # **self.conf["quiet"]
         if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
           print()
           pprint(r)
@@ -222,10 +218,11 @@ class PYTdl(Cmd):
                          "list"
                        }:
         exp = self.expected(url)
-        set_title(f"pYT dl: [{exp}] {url}")
+        self.set_title(f"pYT dl: [{exp}] {url}")
         if self.live(url) and (self.idle or yesno(f"{start}Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
+        # **self.conf["quiet"]
         if (r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
           print()
           pprint(r)
@@ -239,7 +236,7 @@ class PYTdl(Cmd):
   
   def do_getall(self, arg = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
-    set_title(f"pYT dl: organising queue")
+    self.set_title(f"pYT dl: organising queue")
     arg, live = arg.strip(), []
     for url in list(self.queue):
       if url in self.got:
@@ -247,10 +244,10 @@ class PYTdl(Cmd):
     if len(arg) or len(self.queue) == 0:
       self.do_load(arg)
     if len(self.queue):
-      set_title(f"pYT dl: downloading {len(self.queue)} videos")
-      print(f"Getting {len(self.queue)} video{plural(self.queue)}")
+      self.set_title(f"pYT dl: downloading {len(self.queue)} videos")
+      print(f"Getting {len(self.queue)} video{'s'*(len(self.queue) != 1)}")
       try:
-        for url in tqdm(self.queue, ascii = SHOULD_ASCII, ncols = 100, unit = "vid"):
+        for url in tqdm(self.queue, ascii = self.ascii, ncols = 100, unit = "vid"):
           sleep(randint(5, self.sleepy * 2) + random())
           live += self.do_get(url, True)
       except KeyboardInterrupt:
@@ -274,11 +271,11 @@ class PYTdl(Cmd):
       print(f"Added {post-pre} URLs from {path}")
     if get_history:
       self.update_got()
-    set_title(f"pYT dl: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
+    self.set_title(f"pYT dl: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
   def do_save(self, arg = ""):
     "Save the queue to a file (add a ! after to not save the history): save [file] | # [file] | #! [file]"
-    set_title("pYT dl: saving")
+    self.set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
     if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
     if len(path) == 0: path = self.default_file
@@ -296,13 +293,13 @@ class PYTdl(Cmd):
     wn = list(zip(waits, waits[1:] + [3600 * 24]))
     while len(urls):
       url = urls.pop(0)
-      set_title(f"pYT dl: waiting on {url}")
+      self.set_title(f"pYT dl: waiting on {url}")
       live = lambda: self.live(url)
       if live():
         w, n = wn[i]
         elp += w
         if elp > n * 2 and i < len(waits) - 1: i += 1
-        set_title(f"pYT dl: waiting on {url}, checking in {naturaltime(w, future=True)}")
+        self.set_title(f"pYT dl: waiting on {url}, checking in {naturaltime(w, future=True)}")
         try:
           sleep(w + randint(0, w // 3) + random()) # w/ jitter
         except KeyboardInterrupt:
@@ -352,27 +349,24 @@ class PYTdl(Cmd):
   def do_exit(self, arg = ""):
     "Exit pyt-dl"
     self.do_save(arg)
-    set_title(f"pYT dl: exitting")
+    self.set_title(f"pYT dl: exitting")
     print("Exitting")
     return True
   
   def postcmd(self, stop, line):
-    set_title(
+    self.set_title(
       f"pYT dl: {'idle mode' if self.idle else 'interactive'}{f', {len(self.queue)} queued videos' if len(self.queue) else ''}"
     )
     return stop
   
   def preloop(self):
-    set_title("pYT dl: starting up")
-    self.do_load(argn("-l") if "-l" in argv else (argn("-ld") if "-ld" in argv else ""))
-    self.default_file = argn("-d") if "-d" in argv else (argn("-ld") if "-ld" in argv else self.default_file)
-    self.history_file = argn("-h") if "-h" in argv else self.history_file
-    self.idle = "-i" not in argv or "--interactive" not in argv
+    self.set_title("pYT dl: starting up")
+    self.do_load()
     self.do_mode()
   
   def default(self, arg: str):
     arg = arg.strip()
-    op, arg = arg[0], arg[1:]
+    op, arg = arg[0], arg[1:].strip()
     if op == ".": # TODO: do a better job than this, come up with a general operator system (multi-char + multi-op + infix)
       self.do_getall(arg)
     elif op == "!":
@@ -391,5 +385,4 @@ class PYTdl(Cmd):
       self.do_add(f"{op}{arg}")
 
 if __name__ == "__main__":
-  set_title = windll.kernel32.SetConsoleTitleW
   PYTdl().cmdloop()
