@@ -25,8 +25,8 @@ class PYTdl(Cmd):
   forced, idle, ascii, quiet, dated = False, True, False, True, False # behaviour switches
   sleepy, start, maxres = 10, "", None
   local = Path(__file__).parent
-  default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
+  queue_file, history_file, config_file = local / "queue.txt", local / "history.txt", secrets / "config.txt"
   set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # use appropriate one
   conf = { # yt-dlp configurations
     "yt": {
@@ -111,11 +111,18 @@ class PYTdl(Cmd):
   
   def readfile(self, path: str = ""):
     "Reads lines from a file, fallback on default_file"
-    if len(str(path)) == 0: path = self.default_file
-    if (f := Path(path)).is_file():
+    if (f := Path(path if len(str(path)) else self.queue_file)).is_file():
       with open(f) as o:
         return list(filter(None, map(str.strip, o.readlines())))
     return []
+  
+  def grab_config_file(self, path: str | Path):
+    "Update self to local settings"
+    lines = self.readfile(path if len(str(path)) else self.config_file)
+    for name, value in map(lambda line: map(str.strip, line.split("=",maxsplit=1)), lines):
+      value = " ".join(value)
+      if name in self.__dict__ or name in PYTdl.__dict__:
+        self.__setattr__(name, value) # only update real settings, don't import spurious ones
   
   def update_got(self):
     "Update the history file"
@@ -277,7 +284,7 @@ class PYTdl(Cmd):
     "Load the contents of a file into the queue (add a ! to not load the history): load [file] | load! [file] | : [file] | :! [file]"
     path, pre, get_history = arg.strip(), len(self.queue), True
     if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
-    if len(path) == 0: path = self.default_file
+    if len(path) == 0: path = self.queue_file
     for line in self.readfile(path):
       self.do_add(line)
     post = len(self.queue)
@@ -292,7 +299,7 @@ class PYTdl(Cmd):
     self.set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
     if len(path) and path[0] == "!": path, get_history = Path(path[1:].strip()), False
-    elif len(path) == 0: path = self.default_file
+    elif len(path) == 0: path = self.queue_file
     else: path = Path(path)
     if len(lines := self.readfile(path)): queue |= {line: line for line in lines if line not in self.got}
     if len(queue):
@@ -344,6 +351,7 @@ class PYTdl(Cmd):
     print("Idling" if self.idle else "Interactive")
   
   def do_clear(self, arg = None):
+    "Clear the screen"
     if platform.system() == "Windows":
       system("cls")
     else:
@@ -351,8 +359,16 @@ class PYTdl(Cmd):
   
   def do_mode(self, arg = None):
     "Prints details about the mode of operation and system."
-    print(f"Mode: {'Idle' if self.idle else 'Interactive'}")
-    print(f"OS: {platform.system()}")
+    yesify = lambda b: "yes" if b else "no"
+    print("Mode:", "idle" if self.idle else "interactive")
+    print("OS:", platform.system())
+    print("Forcing:", yesify(self.forced))
+    print("Idling:", yesify(self.idle))
+    print("ASCII:", yesify(self.ascii))
+    print("Quiet:", yesify(self.quiet))
+    print("Dated:", yesify(self.dated))
+    print("Sleep interval:", self.sleepy, "seconds")
+    print("Max resolution:", self.maxres if self.maxres else "unlimited")
   
   def do_exit(self, arg: str = ""):
     "Exit pyt-dl"
@@ -369,6 +385,7 @@ class PYTdl(Cmd):
   
   def preloop(self):
     self.set_title("pYT dl: starting up")
+    # self.grab_config_file()
     self.do_load()
     self.do_mode()
   
