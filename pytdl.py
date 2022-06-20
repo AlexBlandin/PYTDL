@@ -28,11 +28,12 @@ class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
   queue, got = {}, set(),
-  forced, idle, ascii = False, True, False # behaviour switches
+  forced, idle, ascii, quiet = False, True, False, False # behaviour switches
   sleepy, start = 10, ""
   local = Path(__file__)
   default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
+  set_title = windll.kernel32.SetConsoleTitleW
   conf = { # yt-dlp configurations
     "yt": {
       "output": r"~\Videos\%(title)s [%(id)s].%(ext)s"
@@ -58,12 +59,8 @@ class PYTdl(Cmd):
       "fixup": "warn",
       "retries": 20,
       "fragment-retries": 20
-    },
-    "quiet": {
-      "quiet": False
     }
   }
-  set_title = windll.kernel32.SetConsoleTitleW
   
   def config(self, url: str):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
@@ -72,21 +69,21 @@ class PYTdl(Cmd):
         self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["yt"]
       ),
       **self.conf["quiet"],
-      **self.conf["default"]
+      **self.conf["default"],
+      "quiet": self.quiet
     }
   
   def download(self, url: str):
-    # **self.conf["quiet"]
+    "Actually download something"
     with YoutubeDL(self.config(url)) as ydl:
       r = ydl.download(url)
-    if r: #(r := run([self.redirect[exp], url] + (["-q"] * self.quiet))).returncode:
-      # print()
-      # pprint(r)
+    if r:
       if not self.idle and yesno(f"{self.start}Did {url} download properly?"): self.got.add(url)
     else:
       self.got.add(url)
   
   def info(self, url: str):
+    "Get the infodict for a video"
     # TODO: is "forcejson" better than dump single json?
     with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
       return ydl.extract_info(url, download = False)
@@ -115,8 +112,8 @@ class PYTdl(Cmd):
   
   def do_quiet(self, arg: str):
     "Toggle whether the downloader is quiet or not"
-    self.conf["quiet"]["quiet"] = not self.conf["quiet"]["quiet"]
-    print("Shh" if self.conf["quiet"]["quiet"] else "BOO!")
+    self.quiet = not self.quiet
+    print("Shh" if self.quiet else "BOO!")
   
   def do_sleepy(self, arg: str):
     "How long do we sleep for (on average)? There is a lower bound of 5s."
