@@ -220,10 +220,10 @@ class PYTdl(Cmd):
   
   def do_force(self, arg: str):
     "Force idle/get/wait the video at a url (space separated for multiple): get [url] | ! [url] | ![url] | ![url] [url] [url]"
-    live = []
-    for url in cleanurls(arg):
+    live, urls = [], cleanurls(arg)
+    for i, url in enumerate(urls, 1):
       if len(url):
-        self.set_title(f"pYT dl: {url}")
+        self.set_title(f"pYT dl: [{i}/{len(urls)}] {url}")
         if self.live(url):
           live.append(url)
           continue
@@ -240,12 +240,12 @@ class PYTdl(Cmd):
   def do_get(self, arg: str, looping: bool = False):
     "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
     self.start = "\r" if looping else ""
-    live = []
-    for url in cleanurls(arg):
+    live, urls = [], cleanurls(arg)
+    for i, url in enumerate(urls, 1):
       if len(url) and (
         url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
       ) or "playlist" in url:
-        self.set_title(f"pYT dl: {url}")
+        self.set_title(f"pYT dl: [{i}/{len(urls)}] {url}")
         if self.live(url) and (self.idle or self.yesno(f"Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
