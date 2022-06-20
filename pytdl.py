@@ -1,9 +1,7 @@
-from json import loads as load_json
 from random import random, randint
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
 from ctypes import windll
-from pprint import pprint
 from pathlib import Path
 from time import sleep
 from os import system
@@ -69,8 +67,8 @@ class PYTdl(Cmd):
         self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["yt"]
       ),
       **self.conf["quiet"],
-      **self.conf["default"],
-      "quiet": self.quiet
+      **self.conf["default"], "quiet":
+        self.quiet
     }
   
   def download(self, url: str):
