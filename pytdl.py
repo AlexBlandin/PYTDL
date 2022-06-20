@@ -46,16 +46,16 @@ class PYTdl(Cmd):
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")}
     },
     "sub": {
-      "sub_lang": "enUS",
-      "write_sub": True,
-      "embed_subs": True,
-      "cookies": cookies / "crunchy.txt",
+      "subtitleslangs": ["enUS"],
+      "writesubtitles": True,
+      # "embed_subs": True,
+      "cookiefile": cookies / "crunchy.txt",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Shows" / "%(series)s" / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s")}
     },
     "default": {
-      "rm_cache_dir": True,
+      # "rm_cache_dir": True,
       "merge_output_format": "mkv",
-      "no_overwrites": True,
+      "overwrites": False,
       "fixup": "warn",
       "retries": 20,
       "fragment_retries": 20,
@@ -72,7 +72,7 @@ class PYTdl(Cmd):
       **self.conf["default"],
       **({
         "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
-      } if self.maxres else {}), "quiet":
+      } if self.maxres else {}), **({"playlistreverse": yesno("{self.start}Do we start numbering this list from the first item (or the last)?")} if "playlist" in url else {}), "quiet":
         self.quiet
     }
   
