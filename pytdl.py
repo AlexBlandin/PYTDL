@@ -27,39 +27,39 @@ class PYTdl(Cmd):
   prompt = "pyt-dl> "
   queue, got = {}, set(),
   forced, idle, ascii, quiet, dated = False, True, False, False, False # behaviour switches
-  sleepy, start = 10, ""
+  sleepy, start, maxres = 10, "", None
   local = Path(__file__).parent
   default_file, history_file = local / "queue.txt", local / "history.txt"
   cookies, secrets = local / "cookies", local / "secrets"
   set_title = windll.kernel32.SetConsoleTitleW
   conf = { # yt-dlp configurations
     "yt": {
-      "output": r"~\Videos\%(title)s [%(id)s].%(ext)s"
+      "outtmpl": {"default": str(Path.home() / "Videos" / "%(title)s [%(id)s].%(ext)s")}
     },
     "dated": {
-      "output": r"~\Videos\%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
+      "outtmpl": {"default": str(Path.home() / "Videos" / "%(uploader)s" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
     },
     "tw": {
-      "output":
-        r"~\Videos\Streams\%(uploader)s\%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|Unknown)s %(title)s.%(ext)s"
+      "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader)s" / "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|Unknown)s %(title)s.%(ext)s")}
     },
     "list": {
-      "output": r"~\Videos\%(playlist_title)s\%(playlist_index)03d %(title)s.%(ext)s"
+      "outtmpl": {"default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")}
     },
     "sub": {
-      "sub-lang": "enUS",
-      "write-sub": True,
-      "embed-subs": True,
-      "output": r"~\Videos\Shows\%(series)s\%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s",
-      "cookies": cookies / "crunchy.txt"
+      "sub_lang": "enUS",
+      "write_sub": True,
+      "embed_subs": True,
+      "cookies": cookies / "crunchy.txt",
+      "outtmpl": {"default": str(Path.home() / "Videos" / "Shows" / "%(series)s" / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s")}
     },
     "default": {
-      "rm-cache-dir": True,
-      "merge-output-format": "mkv",
-      "no-overwrites": True,
+      "rm_cache_dir": True,
+      "merge_output_format": "mkv",
+      "no_overwrites": True,
       "fixup": "warn",
       "retries": 20,
-      "fragment-retries": 20
+      "fragment_retries": 20,
+      # "windowsfilenames": True
     }
   }
   
@@ -69,8 +69,10 @@ class PYTdl(Cmd):
       **(
         self.conf["list"] if "playlist" in url else self.conf["sub"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["dated"] if self.dated else self.conf["yt"]
       ),
-      **self.conf["quiet"],
-      **self.conf["default"], "quiet":
+      **self.conf["default"],
+      **({
+        "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
+      } if self.maxres else {}), "quiet":
         self.quiet
     }
   
@@ -127,6 +129,13 @@ class PYTdl(Cmd):
     self.sleepy = int(arg)
     if self.sleepy < 5: self.sleepy = 5
     print(f"We sleep for {self.sleepy}s on average.")
+  
+  def do_res(self, arg: str):
+    if len(arg.strip()):
+      self.maxres = int(arg)
+    else:
+      self.maxres = None
+    print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")
   
   def do_print(self, arg: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
