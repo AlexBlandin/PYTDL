@@ -11,14 +11,6 @@ import platform
 
 from merge_subs import merge_subs
 
-def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
-  "Keep asking until they say yes or no"
-  while True:
-    reply = input(f"{msg} [y/N]: ").strip().lower()
-    if reply in (yes_list if replace_lists else {"y", "ye", "yes"} | yes_list) or (accept_return and reply == ""):
-      return True
-    if reply in (no_list if replace_lists else {"n", "no"} | no_list): return False
-
 def cleanurls(urls: str):
   return list(map(str.strip, urls.strip().split()))
 
@@ -63,6 +55,15 @@ class PYTdl(Cmd):
       # "windowsfilenames": True
     }
   }
+
+  def yesno(self, msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
+    "Keep asking until they say yes or no"
+    while True:
+      reply = input(f"{self.start}{msg} [y/N]: ").strip().lower()
+      if reply in (yes_list if replace_lists else {"y", "ye", "yes"} | yes_list) or (accept_return and reply == ""):
+        return True
+      if reply in (no_list if replace_lists else {"n", "no"} | no_list): return False
+
   
   def config(self, url: str):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
@@ -73,7 +74,10 @@ class PYTdl(Cmd):
       ),
       **({
         "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
-      } if self.maxres else {}), **({"playlistreverse": yesno("{self.start}Do we start numbering this list from the first item (or the last)?")} if "playlist" in url else {}), "quiet":
+      } if self.maxres else {}),
+      **({
+        "playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")
+      } if "playlist" in url else {}), "quiet":
         self.quiet
     }
   
@@ -82,7 +86,7 @@ class PYTdl(Cmd):
     with YoutubeDL(self.config(url)) as ydl:
       r = ydl.download(url)
     if r:
-      if not self.idle and yesno(f"{self.start}Did {url} download properly?"): self.got.add(url)
+      if not self.idle and self.yesno(f"Did {url} download properly?"): self.got.add(url)
     else:
       self.got.add(url)
   
@@ -93,6 +97,7 @@ class PYTdl(Cmd):
       return ydl.extract_info(url, download = False)
   
   def live(self, url: str) -> bool:
+    "Is the video currently live? If so, we may need to wait until it's not."
     try:
       info = self.info(url)
       if "is_live" in info:
@@ -102,6 +107,7 @@ class PYTdl(Cmd):
     return False
   
   def readfile(self, path: str = ""):
+    "Reads lines from a file, fallback on default_file"
     if len(str(path)) == 0: path = self.default_file
     if (f := Path(path)).is_file():
       with open(f) as o:
@@ -109,11 +115,11 @@ class PYTdl(Cmd):
     return []
   
   def update_got(self):
+    "Update the history file"
     self.got |= set(self.readfile(self.history_file))
-    if Path(self.history_file).is_file():
-      with open(self.history_file, mode = "w") as o:
-        for url in list(self.got):
-          o.write(f"{url}\n")
+    with open(self.history_file, mode = "w+") as o:
+      for url in list(self.got):
+        o.write(f"{url}\n")
   
   def do_quiet(self, arg: str):
     "Toggle whether the downloader is quiet or not"
@@ -142,7 +148,7 @@ class PYTdl(Cmd):
   def do_print(self, arg: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
     queue, arg = list(self.queue), arg.strip()
-    if yesno(f"There are {len(queue)} urls in the queue, do you want to print?") and len(queue):
+    if self.yesno(f"There are {len(queue)} urls in the queue, do you want to print?") and len(queue):
       if len(arg):
         args = cleanurls(arg)
         for arg in args:
@@ -182,9 +188,9 @@ class PYTdl(Cmd):
   def do_del(self, arg: str):
     "Delete a url from the queue and/or history: del [url] | - [url]"
     for url in cleanurls(arg):
-      if len(url) and url in self.queue and yesno(f"Do you want to remove {url} from the queue?"):
+      if len(url) and url in self.queue and self.yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
-      if len(url) and url in self.got and yesno(f"Do you want to remove {url} from the history?"):
+      if len(url) and url in self.got and self.yesno(f"Do you want to remove {url} from the history?"):
         self.got = self.got - {url}
   
   def do_drop(self, arg: str):
@@ -193,9 +199,9 @@ class PYTdl(Cmd):
     self.queue = {k: v for k, v in self.queue.items() if k not in self.got}
     l2 = len(self.queue)
     if l1 > l2: print(f"Removed {l1-l2} urls from the queue that have been downloaded.")
-    if yesno(f"Do you want to remove all {l2} urls from the queue?") and yesno("Are you sure about this?"):
+    if self.yesno(f"Do you want to remove all {l2} urls from the queue?") and self.yesno("Are you sure about this?"):
       self.queue = {}
-    if yesno("Do you want to drop the history of dl'd videos?"):
+    if self.yesno("Do you want to drop the history of dl'd videos?"):
       self.got = set()
   
   def do_forgetaboutem(self, arg):
@@ -207,15 +213,14 @@ class PYTdl(Cmd):
     live = []
     for url in cleanurls(arg):
       if len(url):
-        exp = self.expected(url)
-        self.set_title(f"pYT dl: [{exp}] {url}")
+        self.set_title(f"pYT dl: {url}")
         if self.live(url):
           live.append(url)
           continue
         with YoutubeDL(self.config(url)) as ydl:
           r = ydl.download(url) # 0 is fine, 1 is issue
         if r:
-          if not self.idle and yesno(f"Did {url} download properly?"): self.got.add(url)
+          if not self.idle and self.yesno(f"Did {url} download properly?"): self.got.add(url)
         else:
           self.got.add(url)
       if url == ".":
@@ -227,12 +232,11 @@ class PYTdl(Cmd):
     self.start = "\r" if looping else ""
     live = []
     for url in cleanurls(arg):
-      if len(url) and (url not in self.got or
-                       (not self.idle and yesno(f"{self.start}Try download {url} again?"))) or self.expected(url) in {
-                         "list"
-                       }:
+      if len(url) and (
+        url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
+      ) or "playlist" in url:
         self.set_title(f"pYT dl: {url}")
-        if self.live(url) and (self.idle or yesno(f"{self.start}Currently live, shall we skip and try again later?")):
+        if self.live(url) and (self.idle or self.yesno(f"Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
         self.download(url)
@@ -267,7 +271,7 @@ class PYTdl(Cmd):
     if len(live): self.do_wait(" ".join(live))
   
   def do_load(self, arg: str = ""):
-    "Load the contents of a file into the queue (add a ! after to not load the history): load [file] | : [file] | :! [file]"
+    "Load the contents of a file into the queue (add a ! to not load the history): load [file] | load! [file] | : [file] | :! [file]"
     path, pre, get_history = arg.strip(), len(self.queue), True
     if len(path) and path[0] == "!": path, get_history = path[1:].strip(), False
     if len(path) == 0: path = self.default_file
@@ -281,7 +285,7 @@ class PYTdl(Cmd):
     self.set_title(f"pYT dl: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
   def do_save(self, arg: str = ""):
-    "Save the queue to a file (add a ! after to not save the history): save [file] | # [file] | #! [file]"
+    "Save the queue to a file (add a ! to not save the history): save [file] | save! [file] | # [file] | #! [file]"
     self.set_title("pYT dl: saving")
     path, queue, get_history = arg.strip(), dict(self.queue), True
     if len(path) and path[0] == "!": path, get_history = Path(path[1:].strip()), False
@@ -302,8 +306,7 @@ class PYTdl(Cmd):
     while len(urls):
       url = urls.pop(0)
       self.set_title(f"pYT dl: waiting on {url}")
-      live = lambda: self.live(url)
-      if live():
+      if self.live(url):
         w, n = wn[i]
         elp += w
         if elp > n * 2 and i < len(waits) - 1: i += 1
@@ -311,22 +314,22 @@ class PYTdl(Cmd):
         try:
           sleep(w + randint(0, w // 3) + random()) # w/ jitter
         except KeyboardInterrupt:
-          if not yesno("Test if the video is live right now?") and not yesno("Do you want to continue waiting?"):
+          if not self.yesno("Test if the video is live right now?") and not self.yesno("Do you want to continue waiting?"):
             break
-        if live():
+        if self.live(url):
           urls.append(url)
-      if not live():
+      if not self.live(url):
         self.do_get(url)
         elp, i = 0, 0 # reset since we just spent a chunk of time downloading
   
   def do_merge(self, arg: str = ""):
-    "Merge subtitles within a given directory, recursively. Defaults to searching './Videos/', otherwise provide an argument for the path."
-    path = Path(arg.strip()) if len(arg.strip()) else Path("./Videos/")
+    "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/', otherwise provide an argument for the path."
+    path = Path(arg.strip()) if len(arg.strip()) else Path.home() / "Videos"
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
-    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching './Videos/Shows/', otherwise provide an argument for the path."
-    path = len(arg.strip) if len(arg.strip()) else Path("./Videos/Shows/")
+    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
+    path = Path(arg.strip) if len(arg.strip()) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
@@ -336,9 +339,6 @@ class PYTdl(Cmd):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
     self.idle = not self.idle
     print("Idling" if self.idle else "Interactive")
-  
-  def do_IDLE(self, arg = None):
-    self.do_idle()
   
   def do_clear(self, arg = None):
     if platform.system() == "Windows":
