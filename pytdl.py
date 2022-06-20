@@ -40,6 +40,7 @@ class PYTdl(Cmd):
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(uploader)s" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
     },
     "tw": {
+      "fixup": "never",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader)s" / "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|Unknown)s %(title)s.%(ext)s")}
     },
     "list": {
@@ -66,10 +67,10 @@ class PYTdl(Cmd):
   def config(self, url: str):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return {
+      **self.conf["default"],
       **(
         self.conf["list"] if "playlist" in url else self.conf["crunchy"] if "crunchyroll" in url else self.conf["tw"] if "twitch.tv" in url else self.conf["dated"] if self.dated else self.conf["yt"]
       ),
-      **self.conf["default"],
       **({
         "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
       } if self.maxres else {}), **({"playlistreverse": yesno("{self.start}Do we start numbering this list from the first item (or the last)?")} if "playlist" in url else {}), "quiet":
