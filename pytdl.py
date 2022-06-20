@@ -26,7 +26,7 @@ class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
   queue, got = {}, set(),
-  forced, idle, ascii, quiet, dated = False, True, False, False, False # behaviour switches
+  forced, idle, ascii, quiet, dated = False, True, False, True, False # behaviour switches
   sleepy, start, maxres = 10, "", None
   local = Path(__file__).parent
   default_file, history_file = local / "queue.txt", local / "history.txt"
