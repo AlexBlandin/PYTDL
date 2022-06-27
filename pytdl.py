@@ -119,7 +119,7 @@ class PYTdl(Cmd):
   def grab_config_file(self, path: str | Path):
     "Update self to local settings"
     lines = self.readfile(path if len(str(path)) else self.config_file)
-    for name, value in map(lambda line: map(str.strip, line.split("=",maxsplit=1)), lines):
+    for name, value in map(lambda line: map(str.strip, line.split("=", maxsplit = 1)), lines):
       value = " ".join(value)
       if name in self.__dict__ or name in PYTdl.__dict__:
         self.__setattr__(name, value) # only update real settings, don't import spurious ones
@@ -241,11 +241,11 @@ class PYTdl(Cmd):
     "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
     self.start = "\r" if looping else ""
     live, urls = [], cleanurls(arg)
-    for i, url in enumerate(urls, 1):
+    for url in urls:
       if len(url) and (
         url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
       ) or "playlist" in url:
-        self.set_title(f"pYT dl: [{i}/{len(urls)}] {url}")
+        self.set_title("pYT dl:", url)
         if self.live(url) and (self.idle or self.yesno(f"Currently live, shall we skip and try again later?")):
           live.append(url)
           continue
