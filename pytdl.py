@@ -237,48 +237,45 @@ class PYTdl(Cmd):
         self.do_getall()
     if len(live): self.do_wait(" ".join(live))
   
-  def do_get(self, arg: str, looping: bool = False):
+  def do_get(self, arg: str | list[str]):
     "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
-    self.start = "\r" if looping else ""
-    live, urls = [], cleanurls(arg)
-    for url in urls:
-      if len(url) and (
-        url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
-      ) or "playlist" in url:
-        self.set_title("pYT dl:", url)
-        if self.live(url) and (self.idle or self.yesno(f"Currently live, shall we skip and try again later?")):
-          live.append(url)
-          continue
-        self.download(url)
-      if url == ".":
-        self.do_getall()
-    self.update_got()
-    return live
-  
-  def do_getall(self, arg: str = ""):
-    "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
-    self.set_title(f"pYT dl: organising queue")
-    arg, live = arg.strip(), []
-    for url in list(self.queue):
-      if url in self.got:
-        del self.queue[url]
-    if len(arg) or len(self.queue) == 0:
-      self.do_load(arg)
-    if len(self.queue):
-      self.set_title(f"pYT dl: downloading {len(self.queue)} videos")
-      print(f"Getting {len(self.queue)} video{'s'*(len(self.queue) != 1)}")
+    live, urls = [], cleanurls(arg) if isinstance(arg, str) else arg
+    self.start = "\r" if len(urls) > 1 else ""
+    if len(urls):
+      self.set_title(f"pYT dl: downloading {len(urls)} video{'s'*(len(urls) != 1)}")
+      print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
       try:
-        for url in tqdm(self.queue, ascii = self.ascii, ncols = 100, unit = "vid"):
-          sleep(randint(5, self.sleepy * 2) + random())
-          live += self.do_get(url, True)
+        for i, url in tqdm(enumerate(urls, 1), ascii = self.ascii, ncols = 100, unit = "vid"):
+          if len(url) and (
+            url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
+          ) or "playlist" in url:
+            self.set_title(f"pYT dl: [{i}/{len(urls)}] {url}")
+            if self.live(url) and (self.idle or self.yesno(f"Currently live, shall we skip and try again later?")):
+              live.append(url)
+              continue
+            self.download(url)
+            sleep(randint(5, self.sleepy * 2) + random())
       except KeyboardInterrupt:
         print()
         print("Stopped by user")
       except Exception as err:
         raise err
     else:
-      print("No videos in the queue")
+      print("No videos to download")
+    self.update_got()
     if len(live): self.do_wait(" ".join(live))
+  
+  def do_getall(self, arg: str = ""):
+    "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
+    self.set_title(f"pYT dl: organising queue")
+    arg = arg.strip()
+    for url in list(self.queue):
+      if url in self.got:
+        del self.queue[url]
+    if len(arg) or len(self.queue) == 0:
+      self.do_load(arg)
+    
+    self.do_get(self.queue)
   
   def do_load(self, arg: str = ""):
     "Load the contents of a file into the queue (add a ! to not load the history): load [file] | load! [file] | : [file] | :! [file]"
@@ -308,7 +305,7 @@ class PYTdl(Cmd):
     if get_history: self.update_got()
   
   def do_wait(self, arg: str = ""):
-    "Wait on a currently live video, checking in increasing intervals from 10s to 10mins (no argument waits on queue): wait [url] | wait [url] [url] [url] | wait"
+    "Wait on currently live videos, checking in slowing intervals from 10s to 10mins: wait [url] | wait [url] [url] [url] | wait"
     urls, i = cleanurls(arg), 0
     if len(arg) == 0 or len(urls) == 0: urls = list(self.queue)
     elp, waits = 0, [10, 30, 60]
