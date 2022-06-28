@@ -87,7 +87,13 @@ class PYTdl(Cmd):
   def download(self, url: str):
     "Actually download something"
     with YoutubeDL(self.config(url)) as ydl:
-      r = ydl.download(url)
+      try:
+        r = ydl.download(url)
+      except KeyboardInterrupt as err:
+        raise err
+      except Exception as err:
+        print(err)
+        r = 1
     if r:
       if not self.idle and self.yesno(f"Did {url} download properly?"): self.got.add(url)
     else:
