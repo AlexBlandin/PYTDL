@@ -53,7 +53,7 @@ class PYTdl(Cmd):
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
       "overwrites": False,
-      "fixup": "warn",
+      "fixup": "warn", # "never",
       "retries": 20,
       "fragment_retries": 20,
       # "windowsfilenames": True
