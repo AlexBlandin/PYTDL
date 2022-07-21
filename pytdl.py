@@ -84,9 +84,20 @@ class PYTdl(Cmd):
         self.quiet
     }
   
+  def ensure_dir(self, url: str | Path):
+    "Ensure we can place a URL's resultant file in its expected directory, recursively."
+    stack = []
+    parent = Path(self.config(url)["outtmpl"]["default"]).parent
+    while not parent.exists():
+      stack.append(parent)
+      parent = parent.parent
+    for parent in stack[::-1]:
+      parent.mkdir()
+  
   def download(self, url: str):
     "Actually download something"
     with YoutubeDL(self.config(url)) as ydl:
+      self.ensure_dir(url)
       try:
         r = ydl.download(url)
       except KeyboardInterrupt as err:
