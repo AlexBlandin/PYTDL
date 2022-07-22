@@ -91,6 +91,7 @@ class PYTdl(Cmd):
       stack.append(parent)
       parent = parent.parent
     for parent in stack[::-1]:
+      if "%(" in parent.name and ")s" in parent.name: break
       parent.mkdir()
   
   def download(self, url: str):
