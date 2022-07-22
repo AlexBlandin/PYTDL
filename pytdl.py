@@ -262,7 +262,7 @@ class PYTdl(Cmd):
       self.set_title(f"pYT dl: downloading {len(urls)} video{'s'*(len(urls) != 1)}")
       print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
       try:
-        for i, url in tqdm(enumerate(urls, 1), is_ascii = self.is_ascii, ncols = 100, unit = "vid"):
+        for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if len(url) and (
             url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
