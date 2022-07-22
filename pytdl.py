@@ -22,7 +22,7 @@ class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
   queue, got = {}, set(),
-  forced, idle, ascii, quiet, dated = False, True, False, True, False # behaviour switches
+  forced, idle, is_ascii, quiet, dated = False, True, False, True, False # behaviour switches
   sleepy, start, maxres = 10, "", None
   local = Path(__file__).parent
   cookies, secrets = local / "cookies", local / "secrets"
@@ -262,7 +262,7 @@ class PYTdl(Cmd):
       self.set_title(f"pYT dl: downloading {len(urls)} video{'s'*(len(urls) != 1)}")
       print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
       try:
-        for i, url in tqdm(enumerate(urls, 1), ascii = self.ascii, ncols = 100, unit = "vid"):
+        for i, url in tqdm(enumerate(urls, 1), is_ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if len(url) and (
             url not in self.got or (not self.idle and self.yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
@@ -378,7 +378,7 @@ class PYTdl(Cmd):
     print("OS:", platform.system())
     print("Forcing:", yesify(self.forced))
     print("Idling:", yesify(self.idle))
-    print("ASCII:", yesify(self.ascii))
+    print("ASCII:", yesify(self.is_ascii))
     print("Quiet:", yesify(self.quiet))
     print("Dated:", yesify(self.dated))
     print("Sleep interval:", self.sleepy, "seconds")
