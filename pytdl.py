@@ -10,6 +10,7 @@ from tqdm import tqdm
 from cmd import Cmd
 import platform
 import rtoml
+import os
 
 try:
   from ctypes import windll
@@ -17,6 +18,9 @@ except:
   pass
 
 from merge_subs import merge_subs
+
+def resolve(string): # resolve Path including "~" (bc Path doesn't?)
+  return Path(os.path.expanduser(string))
 
 def cleanurls(urls: str):
   return list(map(str.strip, urls.strip().split()))
@@ -107,7 +111,7 @@ class PYTdl(Cmd):
   
   def ensure_dir(self, url: str | Path):
     "Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."
-    stack, parent = [], Path(self.config(url)["outtmpl"]["default"]).parent
+    stack, parent = [], resolve(self.config(url)["outtmpl"]["default"]).parent
     while not parent.exists():
       stack.append(parent)
       parent = parent.parent
@@ -149,19 +153,19 @@ class PYTdl(Cmd):
   
   def readfile(self, path: str | Path):
     "Reads lines from a file"
-    if (f := Path(path)).is_file():
+    if (f := resolve(path)).is_file():
       return list(filter(None, map(str.strip, f.read_text(encoding = "utf8").splitlines())))
     return []
   
   def writefile(self, path: str | Path, lines: list):
     "Writes lines to a file"
-    f = Path(path)
+    f = resolve(path)
     f.touch()
     f.write_text("\n".join(filter(None, lines)), encoding = "utf8", newline = "\n")
   
   def do_config(self, path: str = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
-    config = rtoml.load(path if Path(path.strip()).is_file() else self.config_file)
+    config = rtoml.load(path if resolve(path.strip()).is_file() else self.config_file)
     def __rec(old, new):
       for k, v in new.items():
         if isinstance(v, dict) and k in old:
@@ -315,7 +319,7 @@ class PYTdl(Cmd):
     path, pre, get_history = arg.strip(), len(self.queue), True
     if path.startswith("-"):
       path, get_history = path.removeprefix("-"), False
-    if len(path) == 0 or not Path(path).is_file():
+    if len(path) == 0 or not resolve(path).is_file():
       path = self.queue_file
     for line in self.readfile(path):
       self.do_add(line)
@@ -366,12 +370,12 @@ class PYTdl(Cmd):
   
   def do_merge(self, arg: str = ""):
     "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/', otherwise provide an argument for the path."
-    path = Path(arg.strip()) if len(arg.strip()) else Path.home() / "Videos"
+    path = resolve(arg.strip()) if len(arg.strip()) else Path.home() / "Videos"
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
     "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
-    path = Path(arg.strip) if len(arg.strip()) else Path.home() / "Videos" / "Shows"
+    path = resolve(arg.strip()) if len(arg.strip()) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
