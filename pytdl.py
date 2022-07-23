@@ -2,6 +2,7 @@ from random import random, randint
 from humanize import naturaltime
 from functools import partial
 from yt_dlp import YoutubeDL
+from typing import Optional
 from pathlib import Path
 from time import sleep
 from os import system
@@ -22,43 +23,41 @@ def cleanurls(urls: str):
 
 class PYTdl(Cmd):
   """
-  Can be configured with the following settings in config_file (uses TOML):
+  pYT dl itself.
   
-  is_forced, is_idle, is_ascii, is_quiet, is_dated: bool: pYT dl behaviour toggles
-  naptime: int # typical wait-time between downloads, minimum 5s
-  maxres: int | None # preferred/highest resolution used for videos
-  queue_file, history_file, config_file, cookies, secrets: str # paths to pYT dl files.
-  
-  The output templates and yt-dlp settings can also be modified, under the `[ytdlp]` table.
-  This is usually via `[ytdlp.default]`, which applies to all downloads (unless overridden).
-  Some known website or preferred format have overriding configs, modified from these tables:
-  - `[ytdlp.twitch]` for twitch.tv and similar livestream platforms (fully timestamped)
-  - `[ytdlp.crunchyroll]` for downloading enUS subbed crunchyroll videos
-  - `[ytdlp.dated]` to include the upload/release date in the filename
-  - `[ytdlp.list]` to download a numbered playlist, in oldest to newest or newest to oldest order
-  
-  To overwrite the filename output template for a chosen <config>, set this table accordingly:
-  [ytdlp.<config>.outtmpl]
-  default: str
+  Can be configured with config_file (uses TOML).
   """
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
-  queue, history = {}, set(),
-  is_forced, is_idle, is_ascii, is_quiet, is_dated = False, True, False, True, False
-  naptime, prefix, maxres = 10, "", None
+  prefix = ""
+  queue, history = {}, set()
   local = Path(__file__).parent
   cookies, secrets = local / "cookies", local / "secrets"
-  queue_file, history_file, config_file = local / "queue.txt", local / "history.txt", local / "config.toml"
-  set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # use appropriate one
+  set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # TODO: cross-platform (linux etc)
+  
+  # Configuration settings
+  is_forced: bool = False # Do we get videos despite the download history?
+  is_idle: bool = True # Do we avoid prompting for user action?
+  is_ascii: bool = False # Do we use ASCII only progress bars?
+  is_quiet: bool = True # Do we try to avoid continuous printouts?
+  is_dated: bool = False # Do we use a dated output by default? (Excludes site-specific downloads i.e. twitch.tv)
+  
+  naptime: int = 3 # average wait-time between downloads
+  maxres: int = 0 # highest resolution for videos, if any (0 is uncapped)
+  
+  queue_file: str | Path = local / "queue.txt" # Where to save download queue
+  history_file: str | Path = local / "history.txt" # Where to save download history
+  config_file: str | Path = local / "config.toml" # Configuration file to load
+  
   ytdlp = { # yt-dlp configurations
     "dated": {
-      "outtmpl": {"default": str(Path.home() / "Videos" / "%(uploader)s" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
+      "outtmpl": {"default": str(Path.home() / "Videos" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
     },
     "twitch": {
       "fixup": "never",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader)s" / "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s")}
     },
-    "list": {
+    "playlist": {
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")}
     },
     "crunchyroll": {
@@ -95,7 +94,7 @@ class PYTdl(Cmd):
     return {
       **self.ytdlp["default"],
       **(
-        self.ytdlp["list"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {}
+        self.ytdlp["playlist"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {}
       ),
       **({
         "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
@@ -160,13 +159,21 @@ class PYTdl(Cmd):
     f.touch()
     f.write_text("\n".join(filter(None, lines)), encoding = "utf8", newline = "\n")
   
-  def grab_config_file(self, path: str | Path = ""):
-    "Update self to local settings, with `<key> = <value>` pairs like `maxres = 1080` or `is_dated = true`"
-    # TODO: This only checks a single level of nesting, so we should do better
-    config = rtoml.load(path if Path(path).is_file() else self.config_file)
+  def do_config(self, path: str = ""):
+    "Load a TOML configuration on a given path, default to config_file: config | config [path]"
+    config = rtoml.load(path if Path(path.strip()).is_file() else self.config_file)
+    def __rec(old, new):
+      for k, v in new.items():
+        if isinstance(v, dict) and k in old:
+          __rec(old[k], v)
+        elif k in old:
+          old[k] = v
     for key, val in config.items():
-      if (key in self.__dict__ or key in PYTdl.__dict__) and (isinstance(val, type(self.key))):
-        self.__setattr__(key, val) # only update real settings, don't import spurious ones
+      if (key in self.__dict__ or key in PYTdl.__dict__) and (isinstance(val, type(self.__getattribute__(key)))):
+        if isinstance(val, dict):
+          __rec(self.__getattribute__(key), val)
+        else:
+          self.__setattr__(key, val)
   
   def update_history(self):
     "Update the history file"
@@ -189,17 +196,17 @@ class PYTdl(Cmd):
     print("Forces" if self.is_forced else "Skips")
   
   def do_naptime(self, arg: str):
-    "How long do we sleep for (on average)? There is a lower bound of 5s."
-    self.naptime = int(arg)
-    if self.naptime < 5: self.naptime = 5
+    "How long do we sleep between downloads (on average)?"
+    if arg.strip().isdecimal(): self.naptime = int(arg.strip())
+    if self.naptime < 0: self.naptime = 0
     print(f"We sleep for {self.naptime}s on average.")
   
   def do_res(self, arg: str):
-    "Provide a maximum resolution to download to, or nothing to remove the limit: res | res 1080C"
+    "Provide a maximum resolution to download to, or nothing to remove the limit: res | res 1080"
     if arg.strip().isdecimal():
-      self.maxres = int(arg)
+      self.maxres = int(arg.strip())
     else:
-      self.maxres = None
+      self.maxres = 0
     print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")
   
   def do_print(self, arg: str):
@@ -284,7 +291,7 @@ class PYTdl(Cmd):
               still_live.append(url)
               continue
             self.download(url)
-            sleep(randint(5, self.naptime * 2) + random())
+            sleep(randint(0, self.naptime * 2) + random())
       except KeyboardInterrupt:
         print()
         print("Stopped by user")
@@ -408,7 +415,8 @@ class PYTdl(Cmd):
   
   def preloop(self):
     self.set_title("pYT dl: starting up")
-    self.grab_config_file()
+    self.do_config()
+    self.do_config() # in case of redirection
     self.do_load()
     self.do_mode()
   
