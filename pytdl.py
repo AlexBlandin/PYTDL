@@ -34,7 +34,7 @@ class PYTdl(Cmd):
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "pyt-dl> "
   prefix = ""
-  queue, history = {}, set()
+  queue, history, deleted = {}, set(), set()
   local = Path(__file__).parent
   cookies, secrets = local / "cookies", local / "secrets"
   set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # TODO: cross-platform (linux etc)
@@ -258,15 +258,14 @@ class PYTdl(Cmd):
     for url in cleanurls(arg):
       if len(url) and url in self.queue and self.yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
+        self.deleted.add(url)
       if len(url) and url in self.history and self.yesno(f"Do you want to remove {url} from the history?"):
         self.history -= {url}
   
   def do_drop(self, arg: str):
     "Drop the queue"
-    l1 = len(self.queue)
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
-    l2 = len(self.queue)
-    if l1 > l2: print(f"Removed {l1-l2} urls from the queue that have been downloaded.")
+    if l1 > l2: print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
     if self.yesno(f"Do you want to remove all {l2} urls from the queue?") and self.yesno("Are you sure about this?"):
       self.queue = {}
     self.do_forget(self)
@@ -340,7 +339,7 @@ class PYTdl(Cmd):
     if len(lines := self.readfile(path)):
       queue |= {line: line for line in lines}
     if len(queue):
-      self.writefile(path, (url for url in queue if url not in self.history))
+      self.writefile(path, (url for url in queue if url not in self.history and url not in self.deleted))
     if set_history: self.update_history()
   
   def do_wait(self, arg: str = ""):
@@ -408,7 +407,7 @@ class PYTdl(Cmd):
     "Exit pYT dl"
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
-    print("Exitting")
+    print(f"Exitting, saved {len(self.queue)} videos to {self.queue_file if not Path(arg).is_file() else arg}")
     return True
   
   def postcmd(self, stop, line):
