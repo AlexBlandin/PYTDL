@@ -405,9 +405,10 @@ class PYTdl(Cmd):
   
   def do_exit(self, arg: str = ""):
     "Exit pYT dl"
+    arg = self.queue_file if not Path(arg).is_file() else arg
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
-    print(f"Exitting, saved {len(self.queue)} videos to {self.queue_file if not Path(arg).is_file() else arg}")
+    print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     return True
   
   def postcmd(self, stop, line):
