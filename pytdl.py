@@ -19,8 +19,8 @@ except:
 
 from merge_subs import merge_subs
 
-def resolve(string): # resolve Path including "~" (bc Path doesn't?)
-  return Path(os.path.expanduser(string))
+def resolve(path): # resolve Path including "~" (bc Path doesn't?)
+  return Path(os.path.expanduser(path.strip() if isinstance(path, string) else path))
 
 def cleanurls(urls: str):
   return list(map(str.strip, urls.strip().split()))
@@ -315,7 +315,7 @@ class PYTdl(Cmd):
   
   def do_load(self, arg: str = ""):
     "Load the contents of a file into the queue (add a - to not load the history): load [file] | load- [file] | : [file] | :- [file]"
-    path, pre, get_history = arg.strip(), len(self.queue), True
+    path, pre, get_history = arg, len(self.queue), True
     if path.startswith("-"):
       path, get_history = path.removeprefix("-"), False
     if len(path) == 0 or not resolve(path).is_file():
@@ -331,7 +331,7 @@ class PYTdl(Cmd):
   def do_save(self, arg: str = ""):
     "Save the queue to a file (defaults to queue_file, add a - to not save the history): save [file] | save- [file] | # [file] | #- [file]"
     self.set_title("pYT dl: saving")
-    path, queue, set_history = arg.strip(), dict(self.queue), True
+    path, queue, set_history = arg, dict(self.queue), True
     if path.startswith("-"):
       path, set_history = path.removeprefix("-"), False
     if len(path) == 0:
@@ -405,9 +405,9 @@ class PYTdl(Cmd):
   
   def do_exit(self, arg: str = ""):
     "Exit pYT dl"
-    arg = self.queue_file if not Path(arg).is_file() else arg
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
+    arg = resolve(self.queue_file if not Path(arg).is_file() else arg)
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     return True
   
