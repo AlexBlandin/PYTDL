@@ -20,7 +20,7 @@ except:
 from merge_subs import merge_subs
 
 def resolve(path): # resolve Path including "~" (bc Path doesn't?)
-  return Path(os.path.expanduser(path.strip() if isinstance(path, string) else path))
+  return Path(os.path.expanduser(path.strip() if isinstance(path, str) else path))
 
 def cleanurls(urls: str):
   return list(map(str.strip, urls.strip().split()))
