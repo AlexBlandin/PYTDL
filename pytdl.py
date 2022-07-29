@@ -7,7 +7,7 @@ from pathlib import Path
 from time import sleep
 from os import system
 from tqdm import tqdm
-from cmd import Cmd
+from cmd import Cmd # reminder: Cmd autostrips arg, including for default
 import platform
 import rtoml
 import os
@@ -20,10 +20,10 @@ except:
 from merge_subs import merge_subs
 
 def resolve(path): # resolve Path including "~" (bc Path doesn't?)
-  return Path(os.path.expanduser(path.strip() if isinstance(path, str) else path))
+  return Path(os.path.expanduser(path))
 
 def cleanurls(urls: str):
-  return list(map(str.strip, urls.strip().split()))
+  return list(map(str.strip, urls.split()))
 
 class PYTdl(Cmd):
   """
@@ -165,7 +165,7 @@ class PYTdl(Cmd):
   
   def do_config(self, path: str = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
-    config = rtoml.load(path if resolve(path.strip()).is_file() else self.config_file)
+    config = rtoml.load(path if resolve(path.is_file() else self.config_file)
     def __rec(old, new):
       for k, v in new.items():
         if isinstance(v, dict) and k in old:
@@ -201,21 +201,21 @@ class PYTdl(Cmd):
   
   def do_naptime(self, arg: str):
     "How long do we sleep between downloads (on average)?"
-    if arg.strip().isdecimal(): self.naptime = int(arg.strip())
+    if arg.isdecimal(): self.naptime = int(arg)
     if self.naptime < 0: self.naptime = 0
     print(f"We sleep for {self.naptime}s on average.")
   
   def do_res(self, arg: str):
     "Provide a maximum resolution to download to, or nothing to remove the limit: res | res 1080"
-    if arg.strip().isdecimal():
-      self.maxres = int(arg.strip())
+    if arg.isdecimal():
+      self.maxres = int(arg)
     else:
       self.maxres = 0
     print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")
   
   def do_print(self, arg: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
-    queue, arg = list(self.queue), arg.strip()
+    queue = list(self.queue)
     if self.yesno(f"There are {len(queue)} urls in the queue, do you want to print?") and len(queue):
       if len(arg):
         args = cleanurls(arg)
@@ -243,7 +243,7 @@ class PYTdl(Cmd):
   
   def do_add(self, arg: str):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
-    temp, arg = None, arg.strip()
+    temp = None
     if len(arg):
       if len(q := arg.split(maxsplit = 1)) > 1:
         if q[0] == "front":
@@ -308,7 +308,6 @@ class PYTdl(Cmd):
   def do_getall(self, arg: str = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
     self.set_title(f"pYT dl: organising queue")
-    arg = arg.strip()
     if len(arg) or len(self.queue) == 0:
       self.do_load(arg)
     self.do_get(self.queue)
@@ -369,12 +368,12 @@ class PYTdl(Cmd):
   
   def do_merge(self, arg: str = ""):
     "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/', otherwise provide an argument for the path."
-    path = resolve(arg.strip()) if len(arg.strip()) else Path.home() / "Videos"
+    path = resolve(arg) if len(arg) else Path.home() / "Videos"
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
     "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
-    path = resolve(arg.strip()) if len(arg.strip()) else Path.home() / "Videos" / "Shows"
+    path = resolve(arg) if len(arg) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
@@ -425,7 +424,6 @@ class PYTdl(Cmd):
     self.do_mode()
   
   def default(self, arg: str):
-    arg = arg.strip()
     op, arg = arg[0], arg[1:].strip()
     # come up with a general operator system? multi-char + multi-op + infix
     if op == ".": # TODO: improve
