@@ -163,9 +163,10 @@ class PYTdl(Cmd):
     f.touch()
     f.write_text("\n".join(filter(None, lines)), encoding = "utf8", newline = "\n")
   
-  def do_config(self, path: str = ""):
+  def do_config(self, arg: str = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
-    config = rtoml.load(path if resolve(path.is_file() else self.config_file)
+    arg = resolve(arg)
+    config = rtoml.load(arg if arg.is_file() else resolve(self.config_file))
     def __rec(old, new):
       for k, v in new.items():
         if isinstance(v, dict) and k in old:
@@ -406,7 +407,8 @@ class PYTdl(Cmd):
     "Exit pYT dl"
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
-    arg = resolve(self.queue_file if not Path(arg).is_file() else arg)
+    arg = resolve(arg)
+    arg = arg if arg.is_file() else resolve(self.queue_file)
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     return True
   
