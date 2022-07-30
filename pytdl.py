@@ -1,8 +1,6 @@
 from random import random, randint
 from humanize import naturaltime
-from functools import partial
 from yt_dlp import YoutubeDL
-from typing import Optional
 from pathlib import Path
 from time import sleep
 from os import system
