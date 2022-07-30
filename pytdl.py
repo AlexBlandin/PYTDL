@@ -167,12 +167,14 @@ class PYTdl(Cmd):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
     arg = resolve(arg)
     config = rtoml.load(arg if arg.is_file() else resolve(self.config_file))
+    
     def __rec(old, new):
       for k, v in new.items():
         if isinstance(v, dict) and k in old:
           __rec(old[k], v)
         elif k in old:
           old[k] = v
+    
     for key, val in config.items():
       if (key in self.__dict__ or key in PYTdl.__dict__) and (isinstance(val, type(self.__getattribute__(key)))):
         if isinstance(val, dict):
@@ -267,7 +269,8 @@ class PYTdl(Cmd):
     "Drop the queue"
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
     if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
-    if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?") and self.yesno("Are you sure about this?"):
+    if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?"
+                  ) and self.yesno("Are you sure about this?"):
       self.queue = {}
     self.do_forget(self)
   
@@ -288,10 +291,12 @@ class PYTdl(Cmd):
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if len(url) and (
-            url not in self.history or self.is_forced or (not self.is_idle and self.yesno(f"Try download {url} again?"))
+            url not in self.history or self.is_forced or
+            (not self.is_idle and self.yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
             self.set_title(f"pYT dl: [{i}/{len(urls)}] {url}")
-            if self.is_live(url) and (self.is_idle or self.yesno(f"Currently live, shall we skip and try again later?")):
+            if self.is_live(url
+                            ) and (self.is_idle or self.yesno(f"Currently live, shall we skip and try again later?")):
               still_live.append(url)
               continue
             self.download(url)
