@@ -76,7 +76,7 @@ class PYTdl(Cmd):
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
       "overwrites": False,
-      "fixup": "warn", # "never",
+      "fixup": "never", # "warn",
       "retries": 20,
       "fragment_retries": 20,
       # "windowsfilenames": True
@@ -266,8 +266,8 @@ class PYTdl(Cmd):
   def do_drop(self, arg: str):
     "Drop the queue"
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
-    if l1 > l2: print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
-    if self.yesno(f"Do you want to remove all {l2} urls from the queue?") and self.yesno("Are you sure about this?"):
+    if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
+    if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?") and self.yesno("Are you sure about this?"):
       self.queue = {}
     self.do_forget(self)
   
