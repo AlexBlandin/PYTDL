@@ -10,6 +10,7 @@ yt-dlp = "^2022.4.8"
 tqdm = "^4.64.0"
 rtoml = "^0.8.0"
 humanize = "^4.0.0"
+# mutagen = "^1.45.1"
 # requests = "^2.27.1"
 # beautifulsoup4 = "^4.11.1"
 
