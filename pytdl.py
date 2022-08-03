@@ -158,7 +158,6 @@ class PYTdl(Cmd):
   def writefile(self, path: str | Path, lines: list):
     "Writes lines to a file"
     f = resolve(path)
-    f.touch()
     f.write_text("\n".join(filter(None, lines)), encoding = "utf8", newline = "\n")
   
   def do_config(self, arg: str = ""):
