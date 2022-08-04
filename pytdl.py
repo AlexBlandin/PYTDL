@@ -77,6 +77,8 @@ class PYTdl(Cmd):
       "fixup": "never", # "warn",
       "retries": 20,
       "fragment_retries": 20,
+      # "add_metadata": True, # hopefully added in a future update
+      # "embed_metadata": True, # hopefully added in a future update
       # "windowsfilenames": True
     }
   }
