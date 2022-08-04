@@ -1,4 +1,6 @@
 from random import random, randint
+from itertools import filterfalse
+from collections import ChainMap
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
 from pathlib import Path
@@ -95,28 +97,22 @@ class PYTdl(Cmd):
   
   def config(self, url: str):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
-    return {
-      **self.ytdlp["default"],
-      **(
-        self.ytdlp["playlist"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {}
-      ),
-      **({
-        "format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"
-      } if self.maxres else {}),
-      **({
-        "playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")
-      } if "playlist" in url else {}), "quiet":
-        self.is_quiet
-    }
+    return ChainMap(
+      {"quiet": self.is_quiet},
+      {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
+      if "playlist" in url else {},
+      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
+      self.ytdlp["playlist"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else
+      self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {},
+      self.ytdlp["default"],
+    )
   
   def ensure_dir(self, url: str | Path):
     "Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."
-    stack, parent = [], resolve(self.config(url)["outtmpl"]["default"]).parent
-    while not parent.exists():
-      stack.append(parent)
-      parent = parent.parent
-    for parent in stack[::-1]:
-      if "%(" in parent.name and ")s" in parent.name: break
+    for parent in [
+      parent for parent in resolve(self.config(url)["outtmpl"]["default"]).parents
+      if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
+    ][::-1]:
       parent.mkdir()
   
   def download(self, url: str):
