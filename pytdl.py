@@ -10,11 +10,6 @@ from cmd import Cmd # reminder: Cmd autostrips arg, including for default
 import platform
 import rtoml
 
-try:
-  from ctypes import windll
-except:
-  pass
-
 from merge_subs import merge_subs
 
 def cleanurls(urls: str):
@@ -32,7 +27,6 @@ class PYTdl(Cmd):
   queue, history, deleted = {}, set(), set()
   local = Path(__file__).parent
   cookies, secrets = local / "cookies", local / "secrets"
-  set_title = windll.kernel32.SetConsoleTitleW if "windll" in globals() else id # TODO: cross-platform (linux etc)
   
   # Configuration settings
   is_forced: bool = False # Do we get videos despite the download history?
@@ -79,6 +73,9 @@ class PYTdl(Cmd):
       # "windowsfilenames": True
     }
   }
+  
+  def set_title(self, s: str):
+    print(f"\33]0;{s}\a", end = "", flush = True)
   
   def yesno(self, msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
     "Keep asking until they say yes or no"
@@ -226,7 +223,7 @@ class PYTdl(Cmd):
     try:
       print(f"Title: {info['fulltitle']}")
       print(f"URL: {url}")
-      print("Live" if info["is_live"] else "VOD")
+      print("Live" if info["is_live"] else "VOD") # TODO: better language and perhaps even detect if it's a VOD of a stream vs just a regular video
     except KeyError as err:
       print(err)
     except Exception as err:
