@@ -388,7 +388,6 @@ class PYTdl(Cmd):
     "Prints details about the mode of operation and system."
     yesify = lambda b: "Yes" if b else "No"
     print("Mode:", "Idle" if self.is_idle else "Interactive")
-    print("OS:", platform.system())
     print("ASCII:", yesify(self.is_ascii))
     print("Quiet:", yesify(self.is_quiet))
     print("Dated:", yesify(self.is_dated))
