@@ -1,13 +1,14 @@
-from random import random, randint
 from collections import ChainMap
+from pathlib import Path
+from random import randint, random
+from time import sleep
+from cmd import Cmd
+from os import system
+import platform
+
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
-from pathlib import Path
-from time import sleep
-from os import system
 from tqdm import tqdm
-from cmd import Cmd # reminder: Cmd autostrips arg, including for default
-import platform
 import rtoml
 
 from merge_subs import merge_subs
@@ -223,7 +224,9 @@ class PYTdl(Cmd):
     try:
       print(f"Title: {info['fulltitle']}")
       print(f"URL: {url}")
-      print("Live" if info["is_live"] else "VOD") # TODO: better language and perhaps even detect if it's a VOD of a stream vs just a regular video
+      print(
+        "Live" if info["is_live"] else "VOD"
+      ) # TODO: better language and perhaps even detect if it's a VOD of a stream vs just a regular video
     except KeyError as err:
       print(err)
     except Exception as err:
