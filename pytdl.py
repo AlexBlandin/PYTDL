@@ -397,7 +397,7 @@ class PYTdl(Cmd):
     print("Sleep interval:", self.naptime, "seconds")
     print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
   
-  def do_exit(self, arg: str = ""):
+  def do_exit(self, arg = ""):
     "Exit pYT dl"
     self.do_save(arg)
     self.set_title(f"pYT dl: exitting")
