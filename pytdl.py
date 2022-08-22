@@ -3,7 +3,7 @@ from pathlib import Path
 from random import randint, random
 from time import sleep
 from cmd import Cmd
-from os import system
+from os import system as term
 import platform
 
 from humanize import naturaltime
@@ -383,9 +383,9 @@ class PYTdl(Cmd):
   def do_clear(self, arg = None):
     "Clear the screen"
     if platform.system() == "Windows":
-      system("cls")
+      term("cls")
     else:
-      system("clear")
+      term("clear")
   
   def do_mode(self, arg = None):
     "Prints details about the mode of operation and system."
