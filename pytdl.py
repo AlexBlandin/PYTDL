@@ -30,6 +30,7 @@ class PYTdl(Cmd):
   cookies, secrets = local / "cookies", local / "secrets"
   
   # Configuration settings
+  is_music: bool = False # Do we only want the audio files?
   is_forced: bool = False # Do we get videos despite the download history?
   is_idle: bool = True # Do we avoid prompting for user action?
   is_ascii: bool = False # Do we use ASCII only progress bars?
@@ -44,6 +45,9 @@ class PYTdl(Cmd):
   config_file: str | Path = local / "config.toml" # Configuration file to load
   
   ytdlp = { # yt-dlp configurations
+    "music": {"format": "bestaudio/best", "postprocessors": [{
+        "key": "FFmpegExtractAudio"
+    }]},
     "dated": {
       "outtmpl": {"default": str(Path.home() / "Videos" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
     },
@@ -88,12 +92,13 @@ class PYTdl(Cmd):
         return True
       if reply in no_list: return False
   
-  def config(self, url: str):
+  def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return ChainMap(
       {"quiet": self.is_quiet},
+      self.ytdlp["music"] if self.is_music else {},
       {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
-      if "playlist" in url else {},
+      if take_input and "playlist" in url else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
       self.ytdlp["playlist"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else
       self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {},
@@ -103,7 +108,7 @@ class PYTdl(Cmd):
   def ensure_dir(self, url: str | Path):
     "Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."
     for parent in [
-      parent for parent in Path(self.config(url)["outtmpl"]["default"]).expanduser().parents
+      parent for parent in Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parents
       if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
     ][::-1]:
       parent.mkdir()
@@ -175,15 +180,20 @@ class PYTdl(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
   
+  def do_music(self, arg):
+    "Toggle whether pYT dl treat urls as only music by default"
+    self.is_music = not self.is_music
+    print("Music!" if self.is_music else "Not music...")
+  
   def do_quiet(self, arg):
-    "Toggle whether the downloader is quiet or not"
+    "Toggle whether pYT dl is quiet or not"
     self.is_quiet = not self.is_quiet
     print("Shh" if self.is_quiet else "BOO!")
   
   def do_dated(self, arg):
-    "Toggle whether the downloader dates videos by default"
+    "Toggle whether pYT dl dates videos by default"
     self.is_dated = not self.is_dated
-    print("Dated" if self.is_dated else "Undated")
+    print("Dating now" if self.is_dated else "Dateless...")
   
   def do_forced(self, arg):
     "Toggle whether to force redownloads of videos"
@@ -393,6 +403,7 @@ class PYTdl(Cmd):
     print("Mode:", "Idle" if self.is_idle else "Interactive")
     print("ASCII:", yesify(self.is_ascii))
     print("Quiet:", yesify(self.is_quiet))
+    print("Music", yesify(self.is_music))
     print("Dated:", yesify(self.is_dated))
     print("Sleep interval:", self.naptime, "seconds")
     print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
