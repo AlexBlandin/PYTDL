@@ -403,7 +403,7 @@ class PYTdl(Cmd):
     print("Mode:", "Idle" if self.is_idle else "Interactive")
     print("ASCII:", yesify(self.is_ascii))
     print("Quiet:", yesify(self.is_quiet))
-    print("Music", yesify(self.is_music))
+    print("Music:", yesify(self.is_music))
     print("Dated:", yesify(self.is_dated))
     print("Sleep interval:", self.naptime, "seconds")
     print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
