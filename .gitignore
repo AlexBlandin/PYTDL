@@ -1,8 +1,8 @@
 # PYTDL files
 queue.txt
 history.txt
+secrets.toml
 cookies/
-secrets/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

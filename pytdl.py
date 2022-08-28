@@ -27,7 +27,7 @@ class PYTdl(Cmd):
   prefix = ""
   queue, history, deleted = {}, set(), set()
   local = Path(__file__).parent
-  cookies, secrets = local / "cookies", local / "secrets"
+  cookies = local / "cookies"
   
   # Configuration settings
   is_music: bool = False # Do we only want the audio files?
@@ -43,8 +43,9 @@ class PYTdl(Cmd):
   queue_file: str | Path = local / "queue.txt" # Where to save download queue
   history_file: str | Path = local / "history.txt" # Where to save download history
   config_file: str | Path = local / "config.toml" # Configuration file to load
+  secrets = rtoml.load(local / "secrets.toml") # Where to load secrets (usernames/passwords, etc)
   
-  ytdlp = { # yt-dlp configurations
+  settings = {
     "music": {"format": "bestaudio/best", "postprocessors": [{
         "key": "FFmpegExtractAudio"
     }]},
@@ -62,6 +63,8 @@ class PYTdl(Cmd):
       "subtitleslangs": ["enUS"],
       "writesubtitles": True,
       # "embed_subs": True,
+      # "username": secrets["crunchyroll"]["username"], # example of how it looks
+      # "password": secrets["crunchyroll"]["password"], # example of how it looks
       "cookiefile": cookies / "crunchy.txt",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Shows" / "%(series)s" / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s")}
     },
@@ -96,13 +99,13 @@ class PYTdl(Cmd):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return ChainMap(
       {"quiet": self.is_quiet},
-      self.ytdlp["music"] if self.is_music else {},
+      self.settings["music"] if self.is_music else {},
       {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
       if take_input and "playlist" in url else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.ytdlp["playlist"] if "playlist" in url else self.ytdlp["crunchyroll"] if "crunchyroll" in url else
-      self.ytdlp["twitch"] if "twitch.tv" in url else self.ytdlp["dated"] if self.is_dated else {},
-      self.ytdlp["default"],
+      self.settings["playlist"] if "playlist" in url else self.settings["crunchyroll"] if "crunchyroll" in url else
+      self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
+      self.settings["default"],
     )
   
   def ensure_dir(self, url: str | Path):
