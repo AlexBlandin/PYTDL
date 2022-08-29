@@ -46,18 +46,50 @@ class PYTdl(Cmd):
   secrets = rtoml.load(local / "secrets.toml") # Where to load secrets (usernames/passwords, etc)
   
   settings = {
-    "music": {"format": "bestaudio/best", "postprocessors": [{
+    "music": {
+      "format": "bestaudio/best",
+      "postprocessors": [{
         "key": "FFmpegExtractAudio"
-    }]},
+      }]
+    },
     "dated": {
-      "outtmpl": {"default": str(Path.home() / "Videos" / "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s")}
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" /
+            "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
+          )
+      }
     },
     "twitch": {
       "fixup": "never",
-      "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader)s" / "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s")}
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" / "Streams" / "%(uploader)s" /
+            "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s"
+          )
+      }
     },
     "playlist": {
-      "outtmpl": {"default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")}
+      "outtmpl": {
+        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")
+      }
+    },
+    "crunchyroll-beta": {
+      "subtitleslangs": ["en-US"],
+      "writesubtitles": True,
+      # "embed_subs": True,
+      # "username": secrets["crunchyroll"]["username"], # example of how it looks
+      # "password": secrets["crunchyroll"]["password"], # example of how it looks
+      "cookiefile": cookies / "crunchy.txt",
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" / "Shows" / "%(series)s" /
+            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+          )
+      }
     },
     "crunchyroll": {
       "subtitleslangs": ["enUS"],
@@ -66,10 +98,18 @@ class PYTdl(Cmd):
       # "username": secrets["crunchyroll"]["username"], # example of how it looks
       # "password": secrets["crunchyroll"]["password"], # example of how it looks
       "cookiefile": cookies / "crunchy.txt",
-      "outtmpl": {"default": str(Path.home() / "Videos" / "Shows" / "%(series)s" / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode)s.%(ext)s")}
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" / "Shows" / "%(series)s" /
+            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+          )
+      }
     },
     "default": {
-      "outtmpl": {"default": str(Path.home() / "Videos" / "%(title)s [%(id)s].%(ext)s")},
+      "outtmpl": {
+        "default": str(Path.home() / "Videos" / "%(title)s [%(id)s].%(ext)s")
+      },
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
       "overwrites": False,
@@ -103,8 +143,9 @@ class PYTdl(Cmd):
       {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
       if take_input and "playlist" in url else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.settings["playlist"] if "playlist" in url else self.settings["crunchyroll"] if "crunchyroll" in url else
-      self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
+      self.settings["playlist"] if "playlist" in url else
+      self.settings["crunchyroll-beta"] if "beta.crunchyroll" in url else self.settings["crunchyroll"] if "crunchyroll"
+      in url else self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
       self.settings["default"],
     )
   
@@ -381,12 +422,12 @@ class PYTdl(Cmd):
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
-    "Cleans leading '0 's from videos downloaded with [sub] that aren't in a numbered season. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
+    "Cleans leading '0 ' and trailing ' - ' and '.' from videos, such as for single-season shows without titles on its episodes. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory]"
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
-        vid.rename(vid.parent / vid.name.removeprefix("0 "))
+        vid.rename(vid.parent / vid.stem.removeprefix("0 ").rstrip().removesuffix(".").removesuffix(" -") + vid.suffix)
   
   def do_idle(self, arg = None):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."

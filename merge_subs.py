@@ -4,7 +4,7 @@ from pathlib import Path
 from pprint import pprint
 
 def merge_subs(path = Path()):
-  "A handy utility to merge enUS.ass subtitles into an mp4 video non-destructively (aka, switch to mkv)"
+  "A handy utility to merge enUS.ass subtitles into an mp4 video non-destructively (by switching to mkv)"
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(lambda p: p.stem.endswith(".enUS"), filter(Path.is_file, path.rglob("*.ass"))))
   pair = {vid: None for vid in vids}
@@ -17,7 +17,7 @@ def merge_subs(path = Path()):
     for _ in range(2): # how many tries
       if (
         r := run(
-          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language=eng" "{str(vid).removesuffix(".mp4")}.mkv" '
+          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language=eng" "{vid.stem}.mkv" '
         )
       ).returncode:
         pprint(r)
