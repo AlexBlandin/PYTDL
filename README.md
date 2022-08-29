@@ -13,10 +13,12 @@ Python Youtube Downloader: An interactive command-line tool to batch download wi
 
 ## Configuration
 
-Use the provided `config.toml` file to set your configuration. See [TOML](toml.io/en/) for syntax.
+Create a `config.toml` file in this folder to set your configuration. See [TOML](toml.io/en/) for syntax.
 The following settings can be altered in the top level:
 
 ```py
+is_audio: bool = False # Do we only want the audio files?
+is_captions: bool = False # Do we only want the captions?
 is_forced: bool = False # Do we get videos despite the download history?
 is_idle: bool = True # Do we avoid prompting for user action?
 is_ascii: bool = False # Do we use ASCII only progress bars?
