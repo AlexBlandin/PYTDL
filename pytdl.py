@@ -30,7 +30,8 @@ class PYTdl(Cmd):
   cookies = local / "cookies"
   
   # Configuration settings
-  is_music: bool = False # Do we only want the audio files?
+  is_audio: bool = False # Do we only want the audio files?
+  is_captions: bool = False # Do we only want the captions?
   is_forced: bool = False # Do we get videos despite the download history?
   is_idle: bool = True # Do we avoid prompting for user action?
   is_ascii: bool = False # Do we use ASCII only progress bars?
@@ -46,11 +47,16 @@ class PYTdl(Cmd):
   secrets = rtoml.load(local / "secrets.toml") # Where to load secrets (usernames/passwords, etc)
   
   settings = {
-    "music": {
+    "audio": {
       "format": "bestaudio/best",
       "postprocessors": [{
         "key": "FFmpegExtractAudio"
       }]
+    },
+    "captions": {
+      "allsubtitles": True,
+      "skip_download": True,
+      "writesubtitles": True,
     },
     "dated": {
       "outtmpl": {
@@ -76,23 +82,8 @@ class PYTdl(Cmd):
         "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")
       }
     },
-    "crunchyroll-beta": {
-      "subtitleslangs": ["en-US"],
-      "writesubtitles": True,
-      # "embed_subs": True,
-      # "username": secrets["crunchyroll"]["username"], # example of how it looks
-      # "password": secrets["crunchyroll"]["password"], # example of how it looks
-      "cookiefile": cookies / "crunchy.txt",
-      "outtmpl": {
-        "default":
-          str(
-            Path.home() / "Videos" / "Shows" / "%(series)s" /
-            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
-          )
-      }
-    },
     "crunchyroll": {
-      "subtitleslangs": ["enUS"],
+      "subtitleslangs": ["en-US"],
       "writesubtitles": True,
       # "embed_subs": True,
       # "username": secrets["crunchyroll"]["username"], # example of how it looks
@@ -122,6 +113,18 @@ class PYTdl(Cmd):
     }
   }
   
+  def do_mode(self, arg = None):
+    "Prints details about the mode of operation and system."
+    yesify = lambda b: "Yes" if b else "No"
+    print("Mode:", "Idle" if self.is_idle else "Interactive")
+    print("ASCII:", yesify(self.is_ascii))
+    print("Quiet:", yesify(self.is_quiet))
+    print("Audio:", yesify(self.is_audio))
+    print("Captions:", yesify(self.is_captions))
+    print("Dated:", yesify(self.is_dated))
+    print("Sleep interval:", self.naptime, "seconds")
+    print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
+  
   def set_title(self, s: str):
     print(f"\33]0;{s}\a", end = "", flush = True)
   
@@ -139,13 +142,12 @@ class PYTdl(Cmd):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return ChainMap(
       {"quiet": self.is_quiet},
-      self.settings["music"] if self.is_music else {},
+      self.settings["audio"] if self.is_audio else self.settings["captions"] if self.is_captions else {},
       {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
       if take_input and "playlist" in url else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.settings["playlist"] if "playlist" in url else
-      self.settings["crunchyroll-beta"] if "beta.crunchyroll" in url else self.settings["crunchyroll"] if "crunchyroll"
-      in url else self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
+      self.settings["playlist"] if "playlist" in url else self.settings["crunchyroll"] if "crunchyroll" in url else
+      self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
       self.settings["default"],
     )
   
@@ -224,10 +226,15 @@ class PYTdl(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
   
-  def do_music(self, arg):
-    "Toggle whether pYT dl treat urls as only music by default"
-    self.is_music = not self.is_music
-    print("Music!" if self.is_music else "Not music...")
+  def do_audio(self, arg):
+    "Toggle whether pYT dl treat urls as only audio by default"
+    self.is_audio = not self.is_audio
+    print("Audio!" if self.is_audio else "Not audio...")
+  
+  def do_captions(self, arg):
+    "Toggle whether pYT dl treat urls as only captions by default"
+    self.is_captions = not self.is_captions
+    print("Captions!" if self.is_captions else "Not captions...")
   
   def do_quiet(self, arg):
     "Toggle whether pYT dl is quiet or not"
@@ -418,7 +425,7 @@ class PYTdl(Cmd):
   
   def do_merge(self, arg: str = ""):
     "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/', otherwise provide an argument for the path."
-    path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos"
+    path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
@@ -440,17 +447,6 @@ class PYTdl(Cmd):
       term("cls")
     else:
       term("clear")
-  
-  def do_mode(self, arg = None):
-    "Prints details about the mode of operation and system."
-    yesify = lambda b: "Yes" if b else "No"
-    print("Mode:", "Idle" if self.is_idle else "Interactive")
-    print("ASCII:", yesify(self.is_ascii))
-    print("Quiet:", yesify(self.is_quiet))
-    print("Music:", yesify(self.is_music))
-    print("Dated:", yesify(self.is_dated))
-    print("Sleep interval:", self.naptime, "seconds")
-    print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
   
   def do_exit(self, arg = ""):
     "Exit pYT dl"
