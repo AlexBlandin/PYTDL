@@ -8,6 +8,7 @@ Python Youtube Downloader: An interactive command-line tool to batch download wi
   + [`tqdm`](https://github.com/tqdm/tqdm)
   + [`rtoml`](https://pypi.org/project/rtoml/)
   + [`humanize`](https://github.com/jmoiron/humanize)
+  + [`langcodes`](https://pypi.org/project/langcodes/)
 - [`ffmpeg`](https://ffmpeg.org)
 
 ## Configuration
