@@ -492,3 +492,4 @@ class PYTdl(Cmd):
 
 if __name__ == "__main__":
   PYTdl().cmdloop()
+  sleep(2.0)
