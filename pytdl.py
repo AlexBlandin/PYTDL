@@ -322,14 +322,16 @@ class PYTdl(Cmd):
     if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
     if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?"
                   ) and self.yesno("Are you sure about this?"):
-      self.queue = {}
+      self.queue.clear()
+    if self.yesno("Do you want to clear the queue file?") and self.yesno("Are you sure about this?"):
+      self.writefile(self.queue_file, "")
     self.do_forget(self)
   
   def do_forget(self, arg):
     "Forget all current known history"
     if self.yesno("Do you want to forget the history of dl'd videos?"):
       self.history.clear()
-    if self.yesno("Do you want to forget the history file?"):
+    if self.yesno("Do you want to forget the history file?") and self.yesno("Are you sure about this?"):
       self.writefile(self.history_file, "")
   
   def do_get(self, arg: str | list[str]):
