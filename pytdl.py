@@ -317,22 +317,29 @@ class PYTdl(Cmd):
         self.history -= {url}
   
   def do_drop(self, arg: str):
-    "Drop the queue"
+    "Drop the queue: drop | drop [queue file]"
+    path = arg
+    if len(path) == 0:
+      path = self.queue_file
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
     if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
     if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?"
                   ) and self.yesno("Are you sure about this?"):
       self.queue.clear()
-    if self.yesno("Do you want to clear the queue file?") and self.yesno("Are you sure about this?"):
+    if self.yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?"
+                  ) and self.yesno("Are you sure about this?"):
       self.writefile(self.queue_file, "")
     self.do_forget(self)
   
   def do_forget(self, arg):
-    "Forget all current known history"
-    if self.yesno("Do you want to forget the history of dl'd videos?"):
+    "Forget all current known history: forget | forget [history file]"
+    path = arg
+    if len(path) == 0:
+      path = self.history_file
+    if self.yesno("Do you want to forget the history of dl'd videos?") and self.yesno("Are you sure about this?"):
       self.history.clear()
     if self.yesno("Do you want to forget the history file?") and self.yesno("Are you sure about this?"):
-      self.writefile(self.history_file, "")
+      self.writefile(path, "")
   
   def do_get(self, arg: str | list[str]):
     "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
