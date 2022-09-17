@@ -80,7 +80,7 @@ class PYTdl(Cmd):
     },
     "playlist": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_autonumber,playlist_index|) %(title)s.%(ext)s")
+        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s")
       }
     },
     "crunchyroll": {
@@ -146,7 +146,7 @@ class PYTdl(Cmd):
     return ChainMap(
       {"quiet": self.is_quiet},
       self.settings["audio"] if self.is_audio else self.settings["captions"] if self.is_captions else {},
-      {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
+      {"playlistreverse": self.yesno("Do we start numbering this list from the first item (often the oldest)?")}
       if take_input and is_playlist else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
       self.settings["playlist"] if is_playlist else self.settings["crunchyroll"] if "crunchyroll" in url else
