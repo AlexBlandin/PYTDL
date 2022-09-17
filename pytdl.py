@@ -26,6 +26,7 @@ class PYTdl(Cmd):
   prompt = "pyt-dl> "
   prefix = ""
   queue, history, deleted = {}, set(), set()
+  info_cache = {}
   local = Path(__file__).parent
   cookies = local / "cookies"
   
@@ -79,7 +80,7 @@ class PYTdl(Cmd):
     },
     "playlist": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_index)03d %(title)s.%(ext)s")
+        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_autonumber,playlist_index|) %(title)s.%(ext)s")
       }
     },
     "crunchyroll": {
@@ -140,13 +141,15 @@ class PYTdl(Cmd):
   
   def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
+    info = self.info(url)
+    is_playlist = "playlist" in url or "youtube.com/c/" in url or "playlist" in info or "playlist_title" in info or "playlist_id" in info
     return ChainMap(
       {"quiet": self.is_quiet},
       self.settings["audio"] if self.is_audio else self.settings["captions"] if self.is_captions else {},
       {"playlistreverse": self.yesno("Do we start numbering this list from the first item (or the last)?")}
-      if take_input and "playlist" in url else {},
+      if take_input and is_playlist else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.settings["playlist"] if "playlist" in url else self.settings["crunchyroll"] if "crunchyroll" in url else
+      self.settings["playlist"] if is_playlist else self.settings["crunchyroll"] if "crunchyroll" in url else
       self.settings["twitch"] if "twitch.tv" in url else self.settings["dated"] if self.is_dated else {},
       self.settings["default"],
     )
@@ -177,9 +180,14 @@ class PYTdl(Cmd):
   
   def info(self, url: str):
     "Get the infodict for a video"
+    if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
+      return self.info_cache[url]
+    
     # TODO: is "forcejson" better than dump single json?
     with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
-      return ydl.extract_info(url, download = False)
+      info = ydl.extract_info(url, download = False)
+    self.info_cache[url] = info
+    return info
   
   def is_live(self, url: str) -> bool:
     "Is the video currently live? If so, we may need to wait until it's not."
