@@ -471,7 +471,7 @@ class PYTdl(Cmd):
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
-        vid.rename(vid.parent / vid.stem.removeprefix("0 ").rstrip().removesuffix(".").removesuffix(" -") + vid.suffix)
+        vid.rename(vid.with_stem(vid.stem.removeprefix("0 ").strip().removesuffix(".").removesuffix(" -")))
   
   def do_idle(self, arg = None):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
