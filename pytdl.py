@@ -80,7 +80,11 @@ class PYTdl(Cmd):
     },
     "playlist": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(playlist_title)s" / "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s")
+        "default":
+          str(
+            Path.home() / "Videos" / "%(playlist_title)s" /
+            "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s"
+          )
       }
     },
     "crunchyroll": {
@@ -142,7 +146,9 @@ class PYTdl(Cmd):
   def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     info = self.info(url)
-    is_playlist = "playlist" in url or "youtube.com/c/" in url or "playlist" in info or "playlist_title" in info or "playlist_id" in info
+    is_playlist = ("playlist" in url or "youtube.com/c/" in url) or (
+      info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
+    )
     return ChainMap(
       {"quiet": self.is_quiet},
       self.settings["audio"] if self.is_audio else self.settings["captions"] if self.is_captions else {},
