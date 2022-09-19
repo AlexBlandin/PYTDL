@@ -143,9 +143,20 @@ class PYTdl(Cmd):
         return True
       if reply in no_list: return False
   
+  def url_info(self, url: str):
+    "Get the infodict for a video"
+    if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
+      return self.info_cache[url]
+    
+    # TODO: is "forcejson" better than dump single json?
+    with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
+      info = ydl.extract_info(url, download = False)
+    self.info_cache[url] = info
+    return info
+  
   def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
-    info = self.info(url)
+    info = self.url_info(url)
     is_playlist = ("playlist" in url or "youtube.com/c/" in url) or (
       info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
     )
@@ -184,21 +195,10 @@ class PYTdl(Cmd):
     else:
       self.history.add(url)
   
-  def info(self, url: str):
-    "Get the infodict for a video"
-    if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
-      return self.info_cache[url]
-    
-    # TODO: is "forcejson" better than dump single json?
-    with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
-      info = ydl.extract_info(url, download = False)
-    self.info_cache[url] = info
-    return info
-  
   def is_live(self, url: str) -> bool:
     "Is the video currently live? If so, we may need to wait until it's not."
     try:
-      info = self.info(url)
+      info = self.url_info(url)
       if "is_live" in info:
         return info["is_live"]
     except:
@@ -295,7 +295,7 @@ class PYTdl(Cmd):
   
   def do_info(self, url: str):
     "Print info about a video: info [url]"
-    info = self.info(url)
+    info = self.url_info(url)
     try:
       print(f"Title: {info['fulltitle']}")
       print(f"URL: {url}")
@@ -327,8 +327,10 @@ class PYTdl(Cmd):
       if len(url) and url in self.queue and self.yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
         self.deleted.add(url)
+        if url in self.info_cache: del self.info_cache[url]
       if len(url) and url in self.history and self.yesno(f"Do you want to remove {url} from the history?"):
         self.history -= {url}
+        if url in self.info_cache: del self.info_cache[url]
   
   def do_drop(self, arg: str):
     "Drop the queue: drop | drop [queue file]"
@@ -352,6 +354,7 @@ class PYTdl(Cmd):
       path = self.history_file
     if self.yesno("Do you want to forget the history of dl'd videos?") and self.yesno("Are you sure about this?"):
       self.history.clear()
+      self.info_cache.clear()
     if self.yesno("Do you want to forget the history file?") and self.yesno("Are you sure about this?"):
       self.writefile(path, "")
   
