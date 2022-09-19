@@ -5,11 +5,12 @@ from time import sleep
 from cmd import Cmd
 from os import system as term
 import platform
+import json
 
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
 from tqdm import tqdm
-import rtoml
+import pytomlpp
 
 from merge_subs import merge_subs
 
@@ -45,7 +46,7 @@ class PYTdl(Cmd):
   queue_file: str | Path = local / "queue.txt" # Where to save download queue
   history_file: str | Path = local / "history.txt" # Where to save download history
   config_file: str | Path = local / "config.toml" # Configuration file to load
-  secrets = rtoml.load(local / "secrets.toml") # Where to load secrets (usernames/passwords, etc)
+  secrets = pytomlpp.load(local / "secrets.toml") # Where to load secrets (usernames/passwords, etc)
   
   settings = {
     "audio": {
@@ -148,11 +149,16 @@ class PYTdl(Cmd):
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
     
-    # TODO: is "forcejson" better than dump single json?
-    with YoutubeDL({"dump_single_json": True, "simulate": True, "quiet": True}) as ydl:
+    with YoutubeDL({"simulate": True, "quiet": True}) as ydl:
       info = ydl.extract_info(url, download = False)
     self.info_cache[url] = info
     return info
+  
+  def do_dump(self, urls: str):
+    "Dumps the info of given URLs to JSON files in CWD: dump [url] [...]"
+    for url in urls.split():
+      info = self.url_info(url)
+      Path(f"{info['id']}.json").write_text(json.dumps(info))
   
   def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
@@ -219,7 +225,7 @@ class PYTdl(Cmd):
   def do_config(self, arg: str = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
     arg = Path(arg).expanduser()
-    config = rtoml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
+    config = pytomlpp.load(arg if arg.is_file() else Path(self.config_file).expanduser())
     
     def __rec(old, new):
       for k, v in new.items():
