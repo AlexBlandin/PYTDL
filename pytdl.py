@@ -116,6 +116,7 @@ class PYTdl(Cmd):
       # "add_metadata": True, # hopefully added in a future update
       # "embed_metadata": True, # hopefully added in a future update
       "windowsfilenames": True,
+      "consoletitle": True, # let dlp handle console title progress
     }
   }
   
@@ -144,12 +145,16 @@ class PYTdl(Cmd):
         return True
       if reply in no_list: return False
   
+  def filter_info(self, info: dict):
+    # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
+    pass
+  
   def url_info(self, url: str):
     "Get the infodict for a video"
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
     
-    with YoutubeDL({"simulate": True, "quiet": True}) as ydl:
+    with YoutubeDL({"simulate": True, "quiet": True, "consoletitle": True}) as ydl:
       info = ydl.extract_info(url, download = False)
     self.info_cache[url] = info
     return info
