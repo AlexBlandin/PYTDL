@@ -157,6 +157,10 @@ class PYTDL(Cmd):
   }
   "The templates that control yt-dlp, such as output file templates, formats, and such settings."
   
+  #############################
+  # Format/Template Selection #
+  #############################
+  
   def config(self, url: str, *, take_input = True):
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return ChainMap(
@@ -175,28 +179,29 @@ class PYTDL(Cmd):
   #########################
   
   def filter_info(self, info: dict):
+    "Cleans an infodict of useless fields"
     # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
-    pass
+    return info
   
   def url_info(self, url: str):
-    "Get the infodict for a video"
+    "Get the infodict for a URL"
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
     
     with YoutubeDL({"simulate": True, "quiet": True, "consoletitle": True}) as ydl:
-      info = ydl.extract_info(url, download = False)
+      info = self.filter_info(ydl.extract_info(url, download = False))
     self.info_cache[url] = info
     return info
   
   def is_playlist(self, url: str):
-    "Is the url actually a playlist? If so, it'll be downloaded differently."
+    "Is a URL actually a playlist? If so, it'll be downloaded differently."
     info = self.url_info(url)
     return ("playlist" in url or "youtube.com/c/" in url) or (
       info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
     )
   
   def is_live(self, url: str) -> bool:
-    "Is the video currently live? If so, we may need to wait until it's not."
+    "Is a video currently live? If so, we may need to wait until it's not."
     try:
       info = self.url_info(url)
       if "is_live" in info:
@@ -250,7 +255,7 @@ class PYTDL(Cmd):
       self.history.add(url)
   
   #################
-  # User Commands #
+  # User Settings #
   #################
   
   def do_mode(self, arg = None):
@@ -284,12 +289,6 @@ class PYTDL(Cmd):
         else:
           self.__setattr__(key, val)
   
-  def do_dump(self, urls: str):
-    "Dumps the info of given URLs to JSON files in CWD: dump [url] [...]"
-    for url in urls.split():
-      info = self.url_info(url)
-      Path(f"{info['id']}.json").write_text(json.dumps(info))
-  
   def do_audio(self, arg):
     "Toggle whether PYTDL treat urls as only audio by default"
     self.is_audio = not self.is_audio
@@ -315,6 +314,11 @@ class PYTDL(Cmd):
     self.is_forced = not self.is_forced
     print("Force downloads" if self.is_forced else "Doesn't force downloads")
   
+  def do_idle(self, arg = None):
+    "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
+    self.is_idle = not self.is_idle
+    print("Idling" if self.is_idle else "Interactive")
+  
   def do_naptime(self, arg: str):
     "How long do we sleep between downloads (on average)?"
     if arg.isdecimal(): self.naptime = int(arg)
@@ -328,6 +332,10 @@ class PYTDL(Cmd):
     else:
       self.maxres = 0
     print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")
+  
+  #################
+  # User Commands #
+  #################
   
   def do_print(self, arg: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
@@ -344,7 +352,7 @@ class PYTDL(Cmd):
           print(url)
   
   def do_info(self, url: str):
-    "Print info about a video: info [url]"
+    "Print select info about a video: info [url]"
     info = self.url_info(url)
     try:
       print(f"Title: {info['fulltitle']}")
@@ -357,6 +365,12 @@ class PYTDL(Cmd):
       print(err)
       raise err
   
+  def do_infodump(self, urls: str):
+    "Dumps all info of given URLs to JSON files in CWD: dump [url] [...]"
+    for url in urls.split():
+      info = self.url_info(url)
+      Path(f"{info['id']}.json").write_text(json.dumps(info))
+  
   def do_add(self, arg: str):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
     temp = None
@@ -368,6 +382,8 @@ class PYTDL(Cmd):
           self.queue = {}
       self.queue |= {url: url for url in cleanurls(arg) if len(url) > 4}
     if temp: self.queue |= temp
+    for url in self.queue:
+      self.deleted.discard(url) # If we add it back in, it should stay in, unless we delete again, etc
   
   def do_del(self, arg: str):
     "Delete a url from the queue and/or history: del [url] | - [url]"
@@ -509,11 +525,6 @@ class PYTDL(Cmd):
       if vid.name.startswith("0 "):
         vid.rename(vid.with_stem(vid.stem.removeprefix("0 ").strip().removesuffix(".").removesuffix(" -")))
   
-  def do_idle(self, arg = None):
-    "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
-    self.is_idle = not self.is_idle
-    print("Idling" if self.is_idle else "Interactive")
-  
   def do_clear(self, arg = None):
     "Clear the screen"
     if platform.system() == "Windows":
@@ -530,6 +541,10 @@ class PYTDL(Cmd):
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     return True
   
+  ################
+  # Cmd Handlers #
+  ################
+  
   def postcmd(self, stop, line):
     set_title(
       f"PYTDL: {'idle mode' if self.is_idle else 'interactive'}{f', {len(self.queue)} queued videos' if len(self.queue) else ''}"
@@ -542,6 +557,10 @@ class PYTDL(Cmd):
     self.do_config() # in case of redirection
     self.do_load()
     self.do_mode()
+  
+  #######################
+  # Shorthand Operators #
+  #######################
   
   def default(self, arg: str):
     op, arg = arg[0], arg[1:].strip()
