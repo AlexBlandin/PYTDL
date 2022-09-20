@@ -22,8 +22,9 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
   "Keep asking until they say yes or no"
   yes_list = yes_list if replace_lists else {"y", "ye", "yes"} | yes_list
   no_list = no_list if replace_lists else {"n", "no"} | no_list
+  fmt = "[Y/n]" if accept_return else "[y/N]"
   while True:
-    reply = input(f"\r{msg} [y/N]: ").strip().lower()
+    reply = input(f"\r{msg} {fmt}: ").strip().lower()
     if reply in yes_list or (accept_return and reply == ""):
       return True
     if reply in no_list: return False
@@ -425,16 +426,15 @@ class PYTDL(Cmd):
       self.writefile(self.queue_file, "")
     self.do_forget(self)
   
-  def do_forget(self, arg):
+  def do_forget(self, arg: str = ""):
     "Forget all current known history: forget | forget [history file]"
-    path = arg
-    if len(path) == 0:
-      path = self.history_file
+    if len(arg) == 0:
+      arg = self.history_file
     if yesno("Do you want to forget the history of dl'd videos?") and yesno("Are you sure about this?"):
       self.history.clear()
       self.info_cache.clear()
     if yesno("Do you want to forget the history file?") and yesno("Are you sure about this?"):
-      self.writefile(path, "")
+      self.writefile(arg, "")
   
   def do_get(self, arg: str | list[str]):
     "Get the video from given URLs: get [url] [...] | ! [url] [...]"
@@ -525,7 +525,7 @@ class PYTDL(Cmd):
         elapsed, i = 0, 0 # reset since we just spent a chunk of time downloading
   
   def do_merge(self, arg: str = ""):
-    "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/', otherwise provide an argument for the path."
+    "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     merge_subs(path)
   
@@ -559,9 +559,7 @@ class PYTDL(Cmd):
   ################
   
   def postcmd(self, stop, line):
-    set_title(
-      f"{'idle mode' if self.is_idle else 'interactive'}{f', {len(self.queue)} queued videos' if len(self.queue) else ''}"
-    )
+    set_title(f"{len(self.queue)} queued videos" if len(self.queue) else "")
     return stop
   
   def preloop(self):
@@ -577,8 +575,8 @@ class PYTDL(Cmd):
   
   def default(self, arg: str):
     op, arg = arg[0], arg[1:].strip()
-    # come up with a general operator system? multi-char + multi-op + infix
-    if op == ".": # TODO: improve
+    # TODO: come up with a general operator system? multi-char + multi-op + infix
+    if op == ".":
       self.do_getall(arg)
     elif op == "!":
       self.do_get(arg)
