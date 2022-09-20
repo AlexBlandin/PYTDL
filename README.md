@@ -33,19 +33,19 @@ history_file: str = pytdl/history.txt # Where to save download history
 config_file: str = pytdl/config.toml # Configuration file to load
 ```
 
-The output templates and yt-dlp settings can also be modified under the `[ytdlp]` table.
-This is usually via `[ytdlp.default]`, which applies to all downloads.
-Some websites will override `[ytdlp.default]`:
-- `[ytdlp.twitch]` for `twitch.tv` and similar livestream platforms (timestamped videos in `~/Streams/<streamer>/`)
-- `[ytdlp.crunchyroll]` for downloading enUS subbed crunchyroll videos (login cookies: `pytdl/cookies/crunchy.txt`)
-- `[ytdlp.playlist]` to download a numbered playlist, in oldest to newest or newest to oldest order (typically youtube)
+The output templates and yt-dlp settings can also be modified under the `[template]` table.
+This is usually via `[template.default]`, which applies to all downloads.
+Some websites will override `[template.default]`:
+- `[template.twitch]` for `twitch.tv` and similar livestream platforms (timestamped videos in `~/Streams/<streamer>/`)
+- `[template.crunchyroll]` for downloading `en-US` subbed crunchyroll videos (login cookies: `pytdl/cookies/crunchy.txt`)
+- `[template.playlist]` to download a numbered playlist, in oldest to newest or newest to oldest order (typically youtube)
 
-Some settings can override `[ytdlp.default]` (but not website overrides):
-- `[ytdlp.dated]` to include the upload/release date in the filename
+Some settings can override `[template.default]` (but not website overrides):
+- `[template.dated]` to include the upload/release date in the filename
 
 To overwrite the filename output template for a chosen `<config>`, set its table accordingly:
 ```toml
-[ytdlp.<config>.outtmpl]
+[template.<config>.outtmpl]
 default: str
 ```
 
@@ -57,10 +57,10 @@ is_dated = true
 maxres = 1080
 naptime = 10
 
-[ytdlp.dated.outtmpl]
+[template.dated.outtmpl]
 default = "~/Videos/%(uploader)s/%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
 ```
 
-The path to the file can be changed during use with the `pyt-dl> config <path>` command.
+The path to the file can be changed during use with the `PYTDL> config <path>` command.
 It can also be altered by setting the path in `config.toml`, such as `config_file = ~/.pytdl_config`.
 This also allows for two simultaneous config files, with the second overriding `config.toml`.
