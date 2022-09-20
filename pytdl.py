@@ -1,5 +1,6 @@
 from collections import ChainMap
 from pathlib import Path
+from typing import Any
 from random import randint, random
 from time import sleep
 from cmd import Cmd
@@ -38,16 +39,16 @@ class PYTDL(Cmd):
   """
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "PYTDL> "
-  queue = {}
+  queue: dict[str, str] = {}
   "Which URLs will we download from next"
-  history = set()
+  history: set[str] = set()
   "Which URLs have we downloaded from (successfully) already"
-  deleted = set()
+  deleted: set[str] = set()
   "Which URLs have we deleted from the queue or history"
-  info_cache = {}
+  info_cache: dict[str, dict[str, Any]] = {}
   "URL info we can save between uses"
   local = Path(__file__).parent
-  "The local path is where PYTDL is located"
+  "The local path is where PYTDL is installed"
   cookies = local / "cookies"
   "Where we keep cookies for yt-dlp to use"
   
@@ -127,7 +128,6 @@ class PYTDL(Cmd):
     "crunchyroll": {
       "subtitleslangs": ["en-US"],
       "writesubtitles": True,
-      # "embed_subs": True,
       # "username": secrets["crunchyroll"]["username"], # example of how it looks
       # "password": secrets["crunchyroll"]["password"], # example of how it looks
       "cookiefile": cookies / "crunchy.txt",
@@ -161,16 +161,16 @@ class PYTDL(Cmd):
   # Format/Template Selection #
   #############################
   
-  def config(self, url: str, *, take_input = True):
+  def config(self, url: str, *, take_input = True) -> ChainMap[str, bool | str]:
     "Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)"
     return ChainMap(
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
-      {"playlistreverse": self.yesno("Do we start numbering this list from the first item (often the oldest)?")}
+      {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")}
       if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.template["playlist"] if self.is_playlist(url) else self.template["crunchyroll"] if "crunchyroll" in url else
-      self.template["twitch"] if "twitch.tv" in url else self.template["dated"] if self.is_dated else {},
+      self.template["playlist"] if self.is_playlist(url) else self.template["crunchyroll"] if self.is_crunchyroll(url)
+      else self.template["twitch"] if self.is_twitch(url) else self.template["dated"] if self.is_dated else {},
       self.template["default"],
     )
   
@@ -178,22 +178,22 @@ class PYTDL(Cmd):
   # URL/Video Information #
   #########################
   
-  def filter_info(self, info: dict):
+  def filter_info(self, info: dict) -> dict[str, dict[str, Any]]:
     "Cleans an infodict of useless fields"
     # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
     return info
   
-  def url_info(self, url: str):
+  def url_info(self, url: str) -> dict[str, dict[str, Any]]:
     "Get the infodict for a URL"
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
     
-    with YoutubeDL({"simulate": True, "quiet": True, "consoletitle": True}) as ydl:
+    with YoutubeDL({"simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}) as ydl:
       info = self.filter_info(ydl.extract_info(url, download = False))
     self.info_cache[url] = info
     return info
   
-  def is_playlist(self, url: str):
+  def is_playlist(self, url: str) -> bool:
     "Is a URL actually a playlist? If so, it'll be downloaded differently."
     info = self.url_info(url)
     return ("playlist" in url or "youtube.com/c/" in url) or (
@@ -210,6 +210,14 @@ class PYTDL(Cmd):
       pass
     return False
   
+  def is_twitch(self, url: str) -> bool:
+    "Is a URL for twitch.tv?"
+    return "twitch.tv" in url
+  
+  def is_crunchyroll(self, url: str) -> bool:
+    "Is a URL for Crunchyroll?"
+    return "crunchyroll" in url
+  
   #######
   # I/O #
   #######
@@ -222,7 +230,7 @@ class PYTDL(Cmd):
     ][::-1]:
       parent.mkdir()
   
-  def readfile(self, path: str | Path):
+  def readfile(self, path: str | Path) -> list[str]:
     "Reads lines from a file"
     if (f := Path(path).expanduser()).is_file():
       return list(filter(None, map(str.strip, f.read_text(encoding = "utf8").splitlines())))
@@ -250,7 +258,7 @@ class PYTDL(Cmd):
         print(err)
         r = 1
     if r:
-      if not self.is_idle and self.yesno(f"Did {url} download properly?"): self.history.add(url)
+      if not self.is_idle and yesno(f"Did {url} download properly?"): self.history.add(url)
     else:
       self.history.add(url)
   
@@ -337,33 +345,44 @@ class PYTDL(Cmd):
   # User Commands #
   #################
   
-  def do_print(self, arg: str):
+  def from_index(self, i: str) -> str | None:
+    queue = list(self.queue)
+    if i.isdecimal() or (len(i) > 1 and i[0] == "-" and i[1:].isdecimal()):
+      return queue[int(i)]
+    return None
+  
+  def do_print(self, args: str):
     "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
     queue = list(self.queue)
-    if self.yesno(f"There are {len(queue)} urls in the queue, do you want to print?") and len(queue):
-      if len(arg):
-        args = cleanurls(arg)
+    print(f"There are {len(queue)} URLs in the queue")
+    if len(queue):
+      if len(args):
+        args = cleanurls(args)
         for arg in args:
-          if arg.isdecimal() or (len(arg) > 1 and arg[0] == "-" and arg[1:].isdecimal()):
-            url = queue[int(arg)]
+          url = self.from_index(arg)
+          if url:
             print(url)
       else:
         for url in queue:
           print(url)
   
-  def do_info(self, url: str):
-    "Print select info about a video: info [url]"
-    info = self.url_info(url)
-    try:
-      print(f"Title: {info['fulltitle']}")
-      print(f"URL: {url}")
-      print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
-    except KeyError as err:
-      print(err)
-    except Exception as err:
-      print(info)
-      print(err)
-      raise err
+  def do_info(self, arg: str):
+    "Print useful info for given URLs: info [url] [...]"
+    for url in arg.split():
+      try:
+        if (u := self.from_index(url)):
+          url = u
+        info = self.url_info(url)
+        print(f"URL: {url}")
+        print(f"Title: {info['fulltitle']}")
+        print("Twitch.tv" if self.is_twitch(url) else "Crunchyroll" if self.is_crunchyroll(url) else "Default")
+        print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
+      except KeyError as err:
+        print(err)
+      except Exception as err:
+        print(info)
+        print(err)
+        raise err
   
   def do_infodump(self, urls: str):
     "Dumps all info of given URLs to JSON files in CWD: dump [url] [...]"
@@ -388,11 +407,11 @@ class PYTDL(Cmd):
   def do_del(self, arg: str):
     "Delete a url from the queue and/or history: del [url] | - [url]"
     for url in cleanurls(arg):
-      if len(url) and url in self.queue and self.yesno(f"Do you want to remove {url} from the queue?"):
+      if len(url) and url in self.queue and yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
         self.deleted.add(url)
         if url in self.info_cache: del self.info_cache[url]
-      if len(url) and url in self.history and self.yesno(f"Do you want to remove {url} from the history?"):
+      if len(url) and url in self.history and yesno(f"Do you want to remove {url} from the history?"):
         self.history -= {url}
         if url in self.info_cache: del self.info_cache[url]
   
@@ -403,11 +422,10 @@ class PYTDL(Cmd):
       path = self.queue_file
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
     if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
-    if self.yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?"
-                  ) and self.yesno("Are you sure about this?"):
+    if yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?") and yesno("Are you sure about this?"):
       self.queue.clear()
-    if self.yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?"
-                  ) and self.yesno("Are you sure about this?"):
+    if yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?"
+             ) and yesno("Are you sure about this?"):
       self.writefile(self.queue_file, "")
     self.do_forget(self)
   
@@ -416,10 +434,10 @@ class PYTDL(Cmd):
     path = arg
     if len(path) == 0:
       path = self.history_file
-    if self.yesno("Do you want to forget the history of dl'd videos?") and self.yesno("Are you sure about this?"):
+    if yesno("Do you want to forget the history of dl'd videos?") and yesno("Are you sure about this?"):
       self.history.clear()
       self.info_cache.clear()
-    if self.yesno("Do you want to forget the history file?") and self.yesno("Are you sure about this?"):
+    if yesno("Do you want to forget the history file?") and yesno("Are you sure about this?"):
       self.writefile(path, "")
   
   def do_get(self, arg: str | list[str]):
@@ -431,12 +449,10 @@ class PYTDL(Cmd):
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if len(url) and (
-            url not in self.history or self.is_forced or
-            (not self.is_idle and self.yesno(f"Try download {url} again?"))
+            url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
             set_title(f"PYTDL: [{i}/{len(urls)}] {url}")
-            if self.is_live(url
-                            ) and (self.is_idle or self.yesno(f"Currently live, shall we skip and try again later?")):
+            if self.is_live(url) and (self.is_idle or yesno(f"Currently live, shall we skip and try again later?")):
               still_live.append(url)
               continue
             self.download(url)
@@ -504,7 +520,7 @@ class PYTDL(Cmd):
         try:
           sleep(wait + randint(0, wait // 3) + random()) # w/ jitter
         except KeyboardInterrupt:
-          if not self.yesno("Test if the video is live now?") and not self.yesno("Do you want to continue waiting?"):
+          if not yesno("Test if the video is live now?") and not yesno("Do you want to continue waiting?"):
             break
         if self.is_live(url):
           urls.append(url)
@@ -539,6 +555,7 @@ class PYTDL(Cmd):
     arg = Path(arg).expanduser()
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
+    sleep(2.0)
     return True
   
   ################
@@ -584,4 +601,3 @@ class PYTDL(Cmd):
 
 if __name__ == "__main__":
   PYTDL().cmdloop()
-  sleep(2.0)
