@@ -15,11 +15,8 @@ import pytomlpp
 
 from merge_subs import merge_subs
 
-def cleanurls(urls: str):
-  return list(map(str.strip, urls.split()))
-
 def set_title(s: str):
-  print(f"\33]0;{s}\a", end = "", flush = True)
+  print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
 
 def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
   "Keep asking until they say yes or no"
@@ -266,7 +263,7 @@ class PYTDL(Cmd):
   # User Settings #
   #################
   
-  def do_mode(self, arg = None):
+  def do_mode(self, arg):
     "Prints details about the mode of operation and system."
     yesify = lambda b: "Yes" if b else "No"
     print("Mode:", "Idle" if self.is_idle else "Interactive")
@@ -322,7 +319,7 @@ class PYTDL(Cmd):
     self.is_forced = not self.is_forced
     print("Force downloads" if self.is_forced else "Doesn't force downloads")
   
-  def do_idle(self, arg = None):
+  def do_idle(self, arg):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
     self.is_idle = not self.is_idle
     print("Idling" if self.is_idle else "Interactive")
@@ -346,28 +343,27 @@ class PYTDL(Cmd):
   #################
   
   def from_index(self, i: str) -> str | None:
+    "Gets the i'th URL in the queue"
     queue = list(self.queue)
     if i.isdecimal() or (len(i) > 1 and i[0] == "-" and i[1:].isdecimal()):
       return queue[int(i)]
     return None
   
-  def do_print(self, args: str):
-    "Print the queue, or certain urls in it: print | print 0 | @ 0 | @ 1 2 5 |  @ -1"
-    queue = list(self.queue)
-    print(f"There are {len(queue)} URLs in the queue")
-    if len(queue):
-      if len(args):
-        args = cleanurls(args)
-        for arg in args:
-          url = self.from_index(arg)
+  def do_print(self, arg: str):
+    "Print the queue, or certain URLs in it: print | print 0 | @ 0 | @ 1 2 5 | @ -1"
+    print(f"There are {len(self.queue)} URLs in the queue")
+    if len(self.queue):
+      if len(arg):
+        for url in arg.split():
+          url = self.from_index(url)
           if url:
             print(url)
       else:
-        for url in queue:
+        for url in self.queue:
           print(url)
   
   def do_info(self, arg: str):
-    "Print useful info for given URLs: info [url] [...]"
+    "Print useful info for given URLs: info [url] [...] | info 0 5 -2 [url] [...]"
     for url in arg.split():
       try:
         if (u := self.from_index(url)):
@@ -399,14 +395,14 @@ class PYTDL(Cmd):
           arg = q[1]
           temp = dict(self.queue)
           self.queue = {}
-      self.queue |= {url: url for url in cleanurls(arg) if len(url) > 4}
+      self.queue |= {url: url for url in arg.split() if len(url) > 4}
     if temp: self.queue |= temp
     for url in self.queue:
-      self.deleted.discard(url) # If we add it back in, it should stay in, unless we delete again, etc
+      self.deleted.discard(url) # If we add it back, it should stay, unless we delete again, etc.
   
   def do_del(self, arg: str):
     "Delete a url from the queue and/or history: del [url] | - [url]"
-    for url in cleanurls(arg):
+    for url in arg.split():
       if len(url) and url in self.queue and yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
         self.deleted.add(url)
@@ -441,17 +437,17 @@ class PYTDL(Cmd):
       self.writefile(path, "")
   
   def do_get(self, arg: str | list[str]):
-    "Get the video at a url (space separated for multiple, double !! for idle mode): get [url] | ! [url] | ![url] | ![url] [url] [url]"
-    still_live, urls = [], cleanurls(arg) if isinstance(arg, str) else arg
+    "Get the video from given URLs: get [url] [...] | ! [url] [...]"
+    still_live, urls = [], arg.split() if isinstance(arg, str) else arg
     if len(urls):
-      set_title(f"PYTDL: downloading {len(urls)} video{'s'*(len(urls) != 1)}")
+      set_title(f"downloading {len(urls)} video{'s'*(len(urls) != 1)}")
       print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if len(url) and (
             url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
-            set_title(f"PYTDL: [{i}/{len(urls)}] {url}")
+            set_title(f"[{i}/{len(urls)}] {url}")
             if self.is_live(url) and (self.is_idle or yesno(f"Currently live, shall we skip and try again later?")):
               still_live.append(url)
               continue
@@ -469,7 +465,7 @@ class PYTDL(Cmd):
   
   def do_getall(self, arg: str = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
-    set_title(f"PYTDL: organising queue")
+    set_title("organising queue")
     if len(arg) or len(self.queue) == 0:
       self.do_load(arg)
     self.do_get(self.queue)
@@ -487,11 +483,11 @@ class PYTDL(Cmd):
     if post > pre:
       print(f"Added {post-pre} URLs from {path}")
     if get_history: self.update_history()
-    set_title(f"PYTDL: loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
+    set_title(f"loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
   def do_save(self, arg: str = ""):
     "Save the queue to a file (defaults to queue_file, add a - to not save the history): save [file] | save- [file] | # [file] | #- [file]"
-    set_title("PYTDL: saving")
+    set_title("saving")
     path, queue, set_history = arg, dict(self.queue), True
     if path.startswith("-"):
       path, set_history = path.removeprefix("-"), False
@@ -504,19 +500,19 @@ class PYTDL(Cmd):
     if set_history: self.update_history()
   
   def do_wait(self, arg: str = ""):
-    "Wait on currently live videos, checking in slowing intervals from 10s to 10mins: wait [url] | wait [url] [url] [url] | wait"
-    urls, i = cleanurls(arg), 0
+    "Wait on currently live videos, checking in slowing intervals from 10s to 10mins: wait | wait [url] [...]"
+    urls, i = arg.split(), 0
     if len(arg) == 0 or len(urls) == 0: urls = list(self.queue)
     elapsed, intervals = 0, [10, 30, 60]
     wait_next = list(zip(intervals, intervals[1:] + [3600 * 24]))
     while len(urls):
       url = urls.pop(0)
-      set_title(f"PYTDL: waiting on {url}")
+      set_title(f"waiting on {url}")
       if self.is_live(url):
         wait, next_wait = wait_next[i]
         elapsed += wait
         if elapsed > next_wait * 2 and i < len(intervals) - 1: i += 1
-        set_title(f"PYTDL: waiting on {url}, checking in {naturaltime(wait, future=True)}")
+        set_title(f"waiting on {url}, checking in {naturaltime(wait, future=True)}")
         try:
           sleep(wait + randint(0, wait // 3) + random()) # w/ jitter
         except KeyboardInterrupt:
@@ -551,7 +547,7 @@ class PYTDL(Cmd):
   def do_exit(self, arg = ""):
     "Exit PYTDL"
     self.do_save(arg)
-    set_title(f"PYTDL: exitting")
+    set_title(f"exitting")
     arg = Path(arg).expanduser()
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
@@ -564,12 +560,12 @@ class PYTDL(Cmd):
   
   def postcmd(self, stop, line):
     set_title(
-      f"PYTDL: {'idle mode' if self.is_idle else 'interactive'}{f', {len(self.queue)} queued videos' if len(self.queue) else ''}"
+      f"{'idle mode' if self.is_idle else 'interactive'}{f', {len(self.queue)} queued videos' if len(self.queue) else ''}"
     )
     return stop
   
   def preloop(self):
-    set_title("PYTDL: starting up")
+    set_title("starting up")
     self.do_config()
     self.do_config() # in case of redirection
     self.do_load()

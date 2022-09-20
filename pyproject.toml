@@ -5,7 +5,7 @@ description = "An interactive command-line tool to batch download with yt-dlp"
 authors = ["AlexBlandin"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 yt-dlp = "^2022.4.8"
 langcodes = "^3.3.0"
 tqdm = "^4.64.0"
