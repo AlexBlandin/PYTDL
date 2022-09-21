@@ -128,7 +128,7 @@ class PYTDL(Cmd):
       "writesubtitles": True,
       # "username": secrets["crunchyroll"]["username"], # example of how it looks
       # "password": secrets["crunchyroll"]["password"], # example of how it looks
-      "cookiefile": cookies / "crunchy.txt",
+      "cookiefile": str(cookies / "crunchy.txt"),
       "outtmpl": {
         "default":
           str(
@@ -187,7 +187,8 @@ class PYTDL(Cmd):
       return self.info_cache[url]
     
     with YoutubeDL({"simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}) as ydl:
-      info = self.filter_info(ydl.extract_info(url, download = False))
+      info = ydl.extract_info(url, download = False)
+    info = self.filter_info(info)
     self.info_cache[url] = info
     return info
   
@@ -264,7 +265,7 @@ class PYTDL(Cmd):
   # User Settings #
   #################
   
-  def do_mode(self, arg):
+  def do_mode(self, arg = ""):
     "Prints details about the mode of operation and system."
     yesify = lambda b: "Yes" if b else "No"
     print("Mode:", "Idle" if self.is_idle else "Interactive")
@@ -295,32 +296,32 @@ class PYTDL(Cmd):
         else:
           self.__setattr__(key, val)
   
-  def do_audio(self, arg):
+  def do_audio(self, arg = ""):
     "Toggle whether PYTDL treat urls as only audio by default"
     self.is_audio = not self.is_audio
     print("Audio!" if self.is_audio else "Not audio...")
   
-  def do_captions(self, arg):
+  def do_captions(self, arg = ""):
     "Toggle whether PYTDL treat urls as only captions by default"
     self.is_captions = not self.is_captions
     print("Captions!" if self.is_captions else "Not captions...")
   
-  def do_quiet(self, arg):
+  def do_quiet(self, arg = ""):
     "Toggle whether PYTDL is quiet or not"
     self.is_quiet = not self.is_quiet
     print("Shh" if self.is_quiet else "BOO!")
   
-  def do_dated(self, arg):
+  def do_dated(self, arg = ""):
     "Toggle whether PYTDL dates videos by default"
     self.is_dated = not self.is_dated
     print("Dating now" if self.is_dated else "Dateless...")
   
-  def do_forced(self, arg):
+  def do_forced(self, arg = ""):
     "Toggle whether to force redownloads of videos"
     self.is_forced = not self.is_forced
     print("Force downloads" if self.is_forced else "Doesn't force downloads")
   
-  def do_idle(self, arg):
+  def do_idle(self, arg = ""):
     "Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."
     self.is_idle = not self.is_idle
     print("Idling" if self.is_idle else "Interactive")
