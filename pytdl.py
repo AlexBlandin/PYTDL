@@ -104,6 +104,20 @@ class PYTDL(Cmd):
           )
       }
     },
+    "playlist": {
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" / "%(playlist_title)s" /
+            "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s"
+          )
+      }
+    },
+    "podcast": {
+      "outtmpl": {
+        "default": str(Path.home() / "Videos" / "Podcasts" / "%(title)s %(webpage_url_basename)s [%(id)s].%(ext)s")
+      }
+    },
     "twitch": {
       "fixup": "never",
       "outtmpl": {
@@ -111,15 +125,6 @@ class PYTDL(Cmd):
           str(
             Path.home() / "Videos" / "Streams" / "%(uploader)s" /
             "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s"
-          )
-      }
-    },
-    "playlist": {
-      "outtmpl": {
-        "default":
-          str(
-            Path.home() / "Videos" / "%(playlist_title)s" /
-            "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s"
           )
       }
     },
@@ -167,8 +172,9 @@ class PYTDL(Cmd):
       {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")}
       if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.template["playlist"] if self.is_playlist(url) else self.template["crunchyroll"] if self.is_crunchyroll(url)
-      else self.template["twitch"] if self.is_twitch(url) else self.template["dated"] if self.is_dated else {},
+      self.template["playlist"] if self.is_playlist(url) else
+      self.template["crunchyroll"] if self.is_crunchyroll(url) else self.template["twitch"] if self.is_twitch(url) else
+      self.template["podcast"] if self.is_podcast(url) else self.template["dated"] if self.is_dated else {},
       self.template["default"],
     )
   
@@ -208,6 +214,10 @@ class PYTDL(Cmd):
     except:
       pass
     return False
+  
+  def is_podcast(self, url: str) -> bool:
+    "Is a URL a podcast?"
+    return "podcast" in url
   
   def is_twitch(self, url: str) -> bool:
     "Is a URL for twitch.tv?"
