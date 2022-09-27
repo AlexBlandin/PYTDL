@@ -40,13 +40,13 @@ Some websites will override `[template.default]`:
 - `[template.crunchyroll]` for downloading `en-US` subbed crunchyroll videos (login cookies: `pytdl/cookies/crunchy.txt`)
 - `[template.playlist]` to download a numbered playlist, in oldest to newest or newest to oldest order (typically youtube)
 
-Some settings can override `[template.default]` (but not website overrides):
-- `[template.dated]` to include the upload/release date in the filename
+Some settings can override `[template.default]` (but not website overrides), e.g.:
+- `[template.dated]` includes the upload/release date in the filename
 
-To overwrite the filename output template for a chosen `<config>`, set its table accordingly:
+To overwrite the filename output template for a chosen `<config>`, set its `outtmpl.default` field:
 ```toml
-[template.<config>.outtmpl]
-default: str
+[template.<config>]
+outtmpl.default: str
 ```
 
 For example, `config.toml` can be:
@@ -57,8 +57,8 @@ is_dated = true
 maxres = 1080
 naptime = 10
 
-[template.dated.outtmpl]
-default = "~/Videos/%(uploader)s/%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
+[template.dated]
+outtmpl.default = "~/Videos/%(uploader)s/%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
 ```
 
 The path to the file can be changed during use with the `PYTDL> config <path>` command.
