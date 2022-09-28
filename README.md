@@ -13,8 +13,9 @@ Python Youtube Downloader: An interactive command-line tool to batch download wi
 
 ## Configuration
 
-Create a `config.toml` file in this folder to set your configuration. See [TOML](toml.io/en/) for syntax.
-The following settings can be altered in the top level:
+Create a `config.toml` file in this folder to set your configuration. See [TOML](toml.io/en/) for allowed syntax.
+
+The following settings can be altered in the top level of the config file, where they must all appear before any `[template]` tables:
 
 ```py
 is_audio: bool = False # Do we only want the audio files?
@@ -23,7 +24,7 @@ is_forced: bool = False # Do we get videos despite the download history?
 is_idle: bool = True # Do we avoid prompting for user action?
 is_ascii: bool = False # Do we use ASCII only progress bars?
 is_quiet: bool = True # Do we try to avoid continuous printouts?
-is_dated: bool = False # Do we use a dated output by default? (Excludes site-specific downloads i.e. twitch.tv)
+is_dated: bool = False # Do we use a dated output by default?
 
 naptime: int = 3 # average wait-time between downloads
 maxres: int = 0 # highest resolution for videos, if any (0 is uncapped)
@@ -33,20 +34,21 @@ history_file: str = pytdl/history.txt # Where to save download history
 config_file: str = pytdl/config.toml # Configuration file to load
 ```
 
-The output templates and yt-dlp settings can also be modified under the `[template]` table.
-This is usually via `[template.default]`, which applies to all downloads.
+The output templates and yt-dlp settings can also be modified under the `[template]` table. This is usually via `[template.default]`, which applies to all downloads.
+
 Some websites will override `[template.default]`:
 - `[template.twitch]` for `twitch.tv` and similar livestream platforms (timestamped videos in `~/Streams/<streamer>/`)
 - `[template.crunchyroll]` for downloading `en-US` subbed crunchyroll videos (login cookies: `pytdl/cookies/crunchy.txt`)
-- `[template.playlist]` to download a numbered playlist, in oldest to newest or newest to oldest order (typically youtube)
+- `[template.playlist]` to download a numbered playlist, in oldest to newest or newest to oldest order
+- `[template.podcast]` will try to download to as broad a file-name as possible, since some set the title and ID to the podcast itself, not the specific episode
 
-Some settings can override `[template.default]` (but not website overrides), e.g.:
-- `[template.dated]` includes the upload/release date in the filename
+Some settings can override `[template.default]` (but not website overrides like `twitch.tv`), e.g.:
+- `is_dated` includes the upload/release date in the filename for default videos
 
-To overwrite the filename output template for a chosen `<config>`, set its `outtmpl.default` field:
+To overwrite the filename [output template](https://github.com/yt-dlp/yt-dlp#output-template) for a chosen `<config>`, set its `outtmpl.default` field:
 ```toml
 [template.<config>]
-outtmpl.default: str
+outtmpl.default = "~/Videos/%(title)s.%(ext)s"
 ```
 
 For example, `config.toml` can be:
