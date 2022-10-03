@@ -5,6 +5,9 @@ history.txt
 secrets.toml
 cookies/
 
+# Dev files
+info/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
