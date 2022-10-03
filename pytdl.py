@@ -11,7 +11,7 @@ import json
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
 from tqdm import tqdm
-import pytomlpp
+import pytomlpp as toml
 
 from merge_subs import merge_subs
 
@@ -80,7 +80,7 @@ class PYTDL(Cmd):
   "Where to save download history"
   config_file: str | Path = local / "config.toml"
   "Configuration file to load"
-  secrets = pytomlpp.load(local / "secrets.toml")
+  secrets = toml.load(local / "secrets.toml")
   "Where to load secrets (usernames/passwords, etc)"
   
   template = {
@@ -290,7 +290,7 @@ class PYTDL(Cmd):
   def do_config(self, arg: str = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
     arg = Path(arg).expanduser()
-    config = pytomlpp.load(arg if arg.is_file() else Path(self.config_file).expanduser())
+    config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
     
     def __rec(old, new):
       for k, v in new.items():
