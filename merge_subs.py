@@ -3,7 +3,7 @@ from subprocess import run
 from pathlib import Path
 from pprint import pprint
 
-import langcodes # used to convert IETF BCP 47 (i.e., Crunchyroll) to ISO 639-2 (for ffmpeg)
+import langcodes # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
 
 nodot = lambda s: s.removeprefix(".")
 def merge_subs(path = Path()):
@@ -15,12 +15,12 @@ def merge_subs(path = Path()):
   for sub in subs:
     l = next(filter(langcodes.tag_is_valid, map(nodot, sub.suffixes)), None)
     if l:
-      v = sub.with_stem(sub.stem.removesuffix("."+l)).with_suffix(".mp4")
+      v = sub.with_stem(sub.stem.removesuffix(f".{l}")).with_suffix(".mp4")
       if v in pair:
         lang[sub] = langcodes.get(l).to_alpha3()
         pair[v] = sub
     else:
-      print("We are missing a language code (i.e. en-US) on", sub)
+      print(f"We are missing a language code (i.e. en-US) on {sub}")
   
   pair: dict[Path, Path] = {vid: sub for vid, sub in pair.items() if sub is not None}
   for vid, sub in pair.items():
