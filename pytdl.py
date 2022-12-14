@@ -104,6 +104,15 @@ class PYTDL(Cmd):
           )
       }
     },
+    "show": {
+      "outtmpl": {
+        "default":
+          str(
+            Path.home() / "Videos" / "Shows" / "%(series)s" /
+            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+          )
+      }
+    },
     "playlist": {
       "outtmpl": {
         "default":
@@ -172,7 +181,7 @@ class PYTDL(Cmd):
       {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")}
       if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.template["playlist"] if self.is_playlist(url) else
+      self.template["playlist"] if self.is_playlist(url) else self.template["show"] if self.is_show(url) else
       self.template["crunchyroll"] if self.is_crunchyroll(url) else self.template["twitch"] if self.is_twitch(url) else
       self.template["podcast"] if self.is_podcast(url) else self.template["dated"] if self.is_dated else {},
       self.template["default"],
@@ -197,6 +206,11 @@ class PYTDL(Cmd):
     info = self.filter_info(info)
     self.info_cache[url] = info
     return info
+  
+  def is_show(self, url: str) -> bool:
+    "Is a URL for a show? If so, it'll have a different folder structure."
+    # info = self.url_info(url)
+    return self.is_crunchyroll(url)
   
   def is_playlist(self, url: str) -> bool:
     "Is a URL actually a playlist? If so, it'll be downloaded differently."
@@ -255,8 +269,17 @@ class PYTDL(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
   
+  def fixerupper(self, url: str):
+    if "imgur.artemislena.eu/" in url:
+      if "imgur.artemislena.eu/gallery/" in url:
+        url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/")
+      else:
+        url = url.replace("imgur.artemislena.eu/", "i.imgur.com/")
+    return url
+  
   def download(self, url: str):
     "Actually download something"
+    url = self.fixerupper(url)
     with YoutubeDL(self.config(url)) as ydl:
       self.ensure_dir(url)
       try:
