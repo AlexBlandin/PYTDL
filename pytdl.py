@@ -270,6 +270,8 @@ class PYTDL(Cmd):
     self.writefile(self.history_file, sorted(self.history))
   
   def fixerupper(self, url: str):
+    if "piped.kavin.rocks/" in url:
+      url = url.replace("piped.kavin.rocks/", "youtube.com/")
     if "imgur.artemislena.eu/" in url:
       if "imgur.artemislena.eu/gallery/" in url:
         url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/")
