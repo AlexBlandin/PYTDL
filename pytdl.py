@@ -207,6 +207,16 @@ class PYTDL(Cmd):
     self.info_cache[url] = info
     return info
   
+  def is_supported(self, url: str) -> bool:
+    try:
+      self.url_info(url)
+    except:
+      if not self.is_quiet:
+        print(url, "is not supported")
+      return False
+    finally:
+      return True
+  
   def is_show(self, url: str) -> bool:
     "Is a URL for a show? If so, it'll have a different folder structure."
     # info = self.url_info(url)
@@ -432,7 +442,10 @@ class PYTDL(Cmd):
           arg = q[1]
           temp = dict(self.queue)
           self.queue = {}
-      self.queue |= {url: url for url in arg.split() if len(url) > 4}
+      for url in arg.split():
+        if len(url) > 4: # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
+          if self.is_supported(url):
+            self.queue[url] = url
     if temp: self.queue |= temp
     for url in self.queue:
       self.deleted.discard(url) # If we add it back, it should stay, unless we delete again, etc.
@@ -480,7 +493,7 @@ class PYTDL(Cmd):
       print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
-          if len(url) and (
+          if self.is_supported(url) and (
             url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
             set_title(f"[{i}/{len(urls)}] {url}")
