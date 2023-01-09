@@ -20,7 +20,7 @@ from merge_subs import merge_subs
 # 1: optional fields without added whitespace
 # 2: dynamic truncation from fields we can safely truncate (title, etc) so we never lose id etc
 
-# TODO: 
+# TODO: logging, file caching so we don't need to make so many spurious lookups, etc
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
@@ -133,6 +133,9 @@ class PYTDL(Cmd):
       "outtmpl": {
         "default": str(Path.home() / "Videos" / "Podcasts" / "%(title.:100)s %(webpage_url_basename)s [%(id)s].%(ext)s")
       }
+    },
+    "ja": {
+      # japasm
     },
     "twitch": {
       # "wait_for_video": (3,10) # TODO: how does this one work? should I use it?
@@ -447,7 +450,7 @@ class PYTDL(Cmd):
       info = self.url_info(url)
       Path(f"{info['id']}.json").write_text(json.dumps(info))
   
-  def do_add(self, arg: str):
+  def do_add(self, arg: str, /, check_supported = True):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
     temp = None
     if len(arg):
@@ -458,7 +461,7 @@ class PYTDL(Cmd):
           self.queue = {}
       for url in arg.split():
         if len(url) > 4: # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
-          if self.is_supported(url):
+          if not check_supported or self.is_supported(url):
             self.queue[url] = url
     if temp: self.queue |= temp
     for url in self.queue:
@@ -533,7 +536,7 @@ class PYTDL(Cmd):
       self.do_load(arg)
     self.do_get(self.queue)
   
-  def do_load(self, arg: str = ""):
+  def do_load(self, arg: str = "", /, check_supported = True):
     "Load the contents of a file into the queue (add a - to not load the history): load [file] | load- [file] | : [file] | :- [file]"
     path, pre, get_history = arg, len(self.queue), True
     if path.startswith("-"):
@@ -541,7 +544,7 @@ class PYTDL(Cmd):
     if len(path) == 0 or not Path(path).expanduser().is_file():
       path = self.queue_file
     for line in self.readfile(path):
-      self.do_add(line)
+      self.do_add(line, check_supported = check_supported)
     post = len(self.queue)
     if post > pre:
       print(f"Added {post-pre} URLs from {path}")
@@ -629,7 +632,7 @@ class PYTDL(Cmd):
     set_title("starting up")
     self.do_config()
     self.do_config() # in case of redirection
-    self.do_load()
+    self.do_load("", check_supported = False)
     self.do_mode()
   
   #######################
