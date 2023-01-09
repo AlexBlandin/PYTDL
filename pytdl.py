@@ -6,6 +6,7 @@ from time import sleep
 from cmd import Cmd
 from os import system as term
 import platform
+import logging # TODO: logging
 import json
 
 from humanize import naturaltime
@@ -14,6 +15,12 @@ from tqdm import tqdm
 import pytomlpp as toml
 
 from merge_subs import merge_subs
+
+# TODO: better outtmpl approach, so we can have
+# 1: optional fields without added whitespace
+# 2: dynamic truncation from fields we can safely truncate (title, etc) so we never lose id etc
+
+# TODO: 
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
@@ -95,12 +102,12 @@ class PYTDL(Cmd):
       "skip_download": True,
       "writesubtitles": True,
     },
-    "dated": {
+    "dated": { # TODO: do a better day of setting this so it can be included in any...
       "outtmpl": {
         "default":
           str(
             Path.home() / "Videos" /
-            "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s [%(id)s].%(ext)s"
+            "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s"
           )
       }
     },
@@ -118,21 +125,23 @@ class PYTDL(Cmd):
         "default":
           str(
             Path.home() / "Videos" / "%(playlist_title)s" /
-            "%(playlist_autonumber,playlist_index|)03d %(title)s.%(ext)s"
+            "%(playlist_autonumber,playlist_index|)03d %(title.:100)s.%(ext)s"
           )
       }
     },
     "podcast": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "Podcasts" / "%(title)s %(webpage_url_basename)s [%(id)s].%(ext)s")
+        "default": str(Path.home() / "Videos" / "Podcasts" / "%(title.:100)s %(webpage_url_basename)s [%(id)s].%(ext)s")
       }
     },
     "twitch": {
+      # "wait_for_video": (3,10) # TODO: how does this one work? should I use it?
+      # "live_from_start": True # TODO: is this how I want it to handle it?
       "fixup": "never",
       "outtmpl": {
         "default":
           str(
-            Path.home() / "Videos" / "Streams" / "%(uploader)s" /
+            Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" /
             "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s"
           )
       }
@@ -147,13 +156,13 @@ class PYTDL(Cmd):
         "default":
           str(
             Path.home() / "Videos" / "Shows" / "%(series)s" /
-            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+            "%(season_number|0)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
           )
       }
     },
     "default": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(title)s [%(id)s].%(ext)s")
+        "default": str(Path.home() / "Videos" / "%(uploader,uploader_id|Unknown)s %(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s")
       },
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
@@ -161,10 +170,15 @@ class PYTDL(Cmd):
       "fixup": "never", # "warn",
       "retries": 20,
       "fragment_retries": 20,
+      # "sleep_interval": # TODO: dynamically fill in if a playlist etc has been submitted
+      # "max_sleep_interval:" # upper bound for random sleep
       # "add_metadata": True, # hopefully added in a future update
       # "embed_metadata": True, # hopefully added in a future update
+      # "trim_file_name": True, # figure out how to do this better
+      # "logger": log, # TODO: this
+      # "download_archive": # set/path of already downloaded files, TODO: look into this
       "windowsfilenames": True,
-      "consoletitle": True, # let dlp handle console title progress
+      "consoletitle": True, # dlp sets progress in the console title
     }
   }
   "The templates that control yt-dlp, such as output file templates, formats, and such settings."
