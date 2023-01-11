@@ -137,7 +137,7 @@ class PYTDL(Cmd):
       "file": {
         "class": "logging.handlers.RotatingFileHandler",
         "formatter": "precise",
-        "filename": "debug.log",
+        "filename": local / "debug.log",
         "level": "DEBUG",
         "maxBytes": 1024*1024,
         "backupCount": 3
@@ -148,7 +148,7 @@ class PYTDL(Cmd):
       "handlers": ["stderr", "stdout", "file"]
     }
   }
-  "The configuration for logging, such that we can provide a log file and terminal output. We already set 'datefmt': '%Y-%m-%d-%H-%M-%S,uuu' by modifying `logging.Formatter.default_time_format`, so do not override datefmt unless you're happy losing the millisecond component."
+  "The configuration for logging, such that we can provide a log file and terminal output."
   
   template = {
     "audio": {
@@ -677,12 +677,15 @@ class PYTDL(Cmd):
   
   def do_exit(self, arg = ""):
     "Exit PYTDL"
+    logging.debug("Exitting sequence started")
     self.do_save(arg)
     set_title(f"exitting")
     arg = Path(arg).expanduser()
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
+    logging.debug(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     sleep(2.0)
+    logging.debug("Exit complete")
     return True
   
   ################
@@ -697,7 +700,8 @@ class PYTDL(Cmd):
     set_title("starting up")
     self.do_config()
     self.do_config() # in case of redirection
-    self.do_load("", check_supported = False)
+    logging.debug(f"Config file loaded ({self.config_file})")
+    self.do_load(check_supported = False)
     self.do_mode()
   
   #######################

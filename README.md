@@ -1,5 +1,5 @@
 # PYTDL
-Python Youtube Downloader: An interactive command-line tool to batch download with yt-dlp
+Python YouTube Downloader: An interactive command-line tool to batch download with [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
 
 ## Requirements
 
@@ -34,6 +34,8 @@ history_file: str = pytdl/history.txt # Where to save download history
 config_file: str = pytdl/config.toml # Configuration file to load
 ```
 
+### Output Templates
+
 The output templates and yt-dlp settings can also be modified under the `[template]` table. This is usually via `[template.default]`, which applies to all downloads.
 
 Some websites will override `[template.default]`:
@@ -66,3 +68,7 @@ outtmpl.default = "~/Videos/%(uploader)s/%(release_date>%Y-%m-%d,timestamp>%Y-%m
 The path to the file can be changed during use with the `PYTDL> config <path>` command.
 It can also be altered by setting the path in `config.toml`, such as `config_file = ~/.pytdl_config`.
 This also allows for two simultaneous config files, with the second overriding `config.toml`.
+
+### Logging
+
+Logging can be altered under the `[log_config]` table in `config.toml`. See the provided default in the `PYTDL` class, which uses the `debug.log` file in the installation directory. We already set `'datefmt': '%Y-%m-%d-%H-%M-%S,uuu'` by modifying `logging.Formatter.default_time_format`, so do not override `datefmt` in a formatter unless you're happy losing the millisecond component. The schema for the dictionary is available [here](https://docs.python.org/3/library/logging.config.html#logging-config-dictschema).
