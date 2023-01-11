@@ -5,22 +5,25 @@ from random import randint, random
 from time import sleep
 from cmd import Cmd
 from os import system as term
+import logging.handlers
+import logging.config
 import platform
-import logging # TODO: logging
+import logging # TODO: logging # setup, so just need to call logging.warning() etc directly now
 import json
+import os
 
+from merge_subs import merge_subs
 from humanize import naturaltime
 from yt_dlp import YoutubeDL
 from tqdm import tqdm
 import pytomlpp as toml
 
-from merge_subs import merge_subs
-
 # TODO: better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
 # 2: dynamic truncation from fields we can safely truncate (title, etc) so we never lose id etc
+# TODO: look into post-processing, can we clean up file names, etc, may help with these
 
-# TODO: logging, file caching so we don't need to make so many spurious lookups, etc
+# TODO: MRU caching to a file so we don't need to make so many spurious lookups between bootup, etc
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
@@ -35,6 +38,14 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
     if reply in yes_list or (accept_return and reply == ""):
       return True
     if reply in no_list: return False
+
+def filter_maker(level):
+  level: int = getattr(logging, level)
+  
+  def filter(record: logging.LogRecord) -> bool:
+    return record.levelno <= level
+  
+  return filter
 
 class PYTDL(Cmd):
   """
@@ -90,6 +101,55 @@ class PYTDL(Cmd):
   secrets = toml.load(local / "secrets.toml")
   "Where to load secrets (usernames/passwords, etc)"
   
+  log_config = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+      "simple": {
+        "format": "{levelname:<8s} :: {message}",
+        "style": "{"
+      },
+      "precise": {
+        "format": "{asctime} {levelname:8s} :: {message}",
+        "style": "{"
+      }
+    },
+    "filters": {
+      "warnings_and_below": {
+        "()": "__main__.filter_maker",
+        "level": "WARNING"
+      }
+    },
+    "handlers": {
+      "stdout": {
+        "class": "logging.StreamHandler",
+        "level": "INFO",
+        "formatter": "simple",
+        "stream": "ext://sys.stdout",
+        "filters": ["warnings_and_below"]
+      },
+      "stderr": {
+        "class": "logging.StreamHandler",
+        "level": "ERROR",
+        "formatter": "simple",
+        "stream": "ext://sys.stderr"
+      },
+      "file": {
+        "class": "logging.handlers.RotatingFileHandler",
+        "formatter": "precise",
+        "filename": "debug.log",
+        "level": "DEBUG",
+        "maxBytes": 1024*1024,
+        "backupCount": 3
+      }
+    },
+    "root": {
+      "level": "DEBUG",
+      "handlers": ["stderr", "stdout", "file"]
+    }
+  }
+  "The configuration for logging, such that we can provide a log file and terminal output. We already set 'datefmt': '%Y-%m-%d-%H-%M-%S,uuu' by modifying `logging.Formatter.default_time_format`, so do not override datefmt unless you're happy losing the millisecond component."
+  
   template = {
     "audio": {
       "format": "bestaudio/best",
@@ -136,6 +196,9 @@ class PYTDL(Cmd):
     },
     "ja": {
       # japasm
+    },
+    "twitter": {
+      # switch around so it used uploader_id,uploader bc display names are funky
     },
     "twitch": {
       # "wait_for_video": (3,10) # TODO: how does this one work? should I use it?
@@ -357,6 +420,8 @@ class PYTDL(Cmd):
           __rec(self.__getattribute__(key), val)
         else:
           self.__setattr__(key, val)
+    
+    logging.config.dictConfig(self.log_config)
   
   def do_audio(self, arg = ""):
     "Toggle whether PYTDL treat urls as only audio by default"
@@ -660,4 +725,6 @@ class PYTDL(Cmd):
       self.do_add(f"{op}{arg}")
 
 if __name__ == "__main__":
+  os.chdir(Path.home()) # so we're always somewhere safe
+  logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S" # so we 
   PYTDL().cmdloop()
