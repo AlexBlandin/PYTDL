@@ -19,10 +19,18 @@ pylint = "^2.14.5"
 yapf = "^0.32.0"
 isort = "^5.10.1"
 pyupgrade = "^2.37.3"
+ruff = "^0.0.236"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+select = ["E", "F"]
+# ignore = ["E501"] # E501 (line length  violations)
+unfixable = ["B", "SIM", "TRY", "RUF"]
+line-length = 120
+target-version = "py39"
 
 [tool.yapf]
 based_on_style = "pep8"

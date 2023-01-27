@@ -167,7 +167,7 @@ class PYTDL(Cmd):
         "default":
           str(
             Path.home() / "Videos" /
-            "%(release_date>%Y-%m-%d,timestamp>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s"
+            "%(timestamp>%Y-%m-%d,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s"
           )
       }
     },
@@ -208,7 +208,7 @@ class PYTDL(Cmd):
         "default":
           str(
             Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" /
-            "%(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title)s.%(ext)s"
+            "%(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s.%(ext)s"
           )
       }
     },
@@ -228,7 +228,7 @@ class PYTDL(Cmd):
     },
     "default": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(uploader,uploader_id|Unknown)s %(timestamp>%Y-%m-%d-%H-%M-%S,upload_date>%Y-%m-%d-%H-%M-%S|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s")
+        "default": str(Path.home() / "Videos" / "%(uploader,uploader_id|Unknown)s %(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s")
       },
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
