@@ -139,7 +139,7 @@ class PYTDL(Cmd):
         "formatter": "precise",
         "filename": local / "debug.log",
         "level": "DEBUG",
-        "maxBytes": 1024*1024,
+        "maxBytes": 1024 * 1024,
         "backupCount": 3
       }
     },
@@ -337,11 +337,12 @@ class PYTDL(Cmd):
   
   def ensure_dir(self, url: str | Path):
     "Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."
-    for parent in [
-      parent for parent in Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parents
-      if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
-    ][::-1]:
-      parent.mkdir()
+    Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parent.mkdir(parents = True, exist_ok = True)
+    # for parent in [
+    #   parent for parent in Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parents
+    #   if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
+    # ][::-1]:
+    #   parent.mkdir()
   
   def readfile(self, path: str | Path) -> list[str]:
     "Reads lines from a file"
@@ -730,5 +731,5 @@ class PYTDL(Cmd):
 
 if __name__ == "__main__":
   os.chdir(Path.home()) # so we're always somewhere safe
-  logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S" # so we 
+  logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S" # so we
   PYTDL().cmdloop()
