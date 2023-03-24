@@ -29,14 +29,14 @@ build-backend = "poetry.core.masonry.api"
 select = ["E", "F"]
 # ignore = ["E501"] # E501 (line length  violations)
 unfixable = ["B", "SIM", "TRY", "RUF"]
-line-length = 120
+line-length = 160
 target-version = "py39"
 
 [tool.yapf]
 based_on_style = "pep8"
 indent_width = 2
 continuation_indent_width = 2
-column_limit = 120
+column_limit = 160
 blank_line_before_nested_class_or_def = false
 blank_lines_around_top_level_definition = 1
 coalesce_brackets = true
@@ -56,6 +56,6 @@ multi_line_output = 3
 force_grid_wrap = 0
 reverse_sort = true
 length_sort = true
-line_length = 120
+line_length = 160
 from_first = true
 indent = "  "
