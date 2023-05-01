@@ -37,10 +37,11 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
     reply = input(f"\r{msg} {fmt}: ").strip().lower()
     if reply in yes_list or (accept_return and reply == ""):
       return True
-    if reply in no_list: return False
+    if reply in no_list:
+      return False
 
-def filter_maker(level):
-  level: int = getattr(logging, level)
+def filter_maker(lvl):
+  level: int = getattr(logging, lvl)
   
   def filter(record: logging.LogRecord) -> bool:
     return record.levelno <= level
@@ -100,6 +101,10 @@ class PYTDL(Cmd):
   "Configuration file to load"
   secrets = toml.load(local / "secrets.toml")
   "Where to load secrets (usernames/passwords, etc)"
+  
+  fmt_timestamp = "%(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s"
+  fmt_date_only = "%(timestamp>%Y-%m-%d,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s"
+  fmt_title = "%(title.:100)s"
   
   log_config = {
     "version": 1,
@@ -166,8 +171,7 @@ class PYTDL(Cmd):
       "outtmpl": {
         "default":
           str(
-            Path.home() / "Videos" /
-            "%(timestamp>%Y-%m-%d,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s"
+            Path.home() / "Videos" / f"{fmt_date_only} {fmt_title} [%(id)s].%(ext)s"
           )
       }
     },
@@ -175,8 +179,7 @@ class PYTDL(Cmd):
       "outtmpl": {
         "default":
           str(
-            Path.home() / "Videos" / "Shows" / "%(series)s" /
-            "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+            Path.home() / "Videos" / "Shows" / "%(series)s" / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
           )
       }
     },
@@ -184,14 +187,13 @@ class PYTDL(Cmd):
       "outtmpl": {
         "default":
           str(
-            Path.home() / "Videos" / "%(playlist_title)s" /
-            "%(playlist_autonumber,playlist_index|)03d %(title.:100)s.%(ext)s"
+            Path.home() / "Videos" / "%(playlist_title)s" / f"%(playlist_autonumber,playlist_index|)03d {fmt_title}.%(ext)s"
           )
       }
     },
     "podcast": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "Podcasts" / "%(title.:100)s %(webpage_url_basename)s [%(id)s].%(ext)s")
+        "default": str(Path.home() / "Videos" / "Podcasts" / f"{fmt_title} %(webpage_url_basename)s [%(id)s].%(ext)s")
       }
     },
     "ja": {
@@ -207,8 +209,7 @@ class PYTDL(Cmd):
       "outtmpl": {
         "default":
           str(
-            Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" /
-            "%(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title)s.%(ext)s"
+            Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s"
           )
       }
     },
@@ -228,7 +229,7 @@ class PYTDL(Cmd):
     },
     "default": {
       "outtmpl": {
-        "default": str(Path.home() / "Videos" / "%(uploader,uploader_id|Unknown)s %(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s %(title.:100)s [%(id)s].%(ext)s")
+        "default": str(Path.home() / "Videos" / f"%(uploader,uploader_id|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s")
       },
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
@@ -258,12 +259,11 @@ class PYTDL(Cmd):
     return ChainMap(
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
-      {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")}
-      if take_input and self.is_playlist(url) else {},
+      {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")} if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
-      self.template["playlist"] if self.is_playlist(url) else self.template["show"] if self.is_show(url) else
-      self.template["crunchyroll"] if self.is_crunchyroll(url) else self.template["twitch"] if self.is_twitch(url) else
-      self.template["podcast"] if self.is_podcast(url) else self.template["dated"] if self.is_dated else {},
+      self.template["playlist"]
+      if self.is_playlist(url) else self.template["show"] if self.is_show(url) else self.template["crunchyroll"] if self.is_crunchyroll(url) else
+      self.template["twitch"] if self.is_twitch(url) else self.template["podcast"] if self.is_podcast(url) else self.template["dated"] if self.is_dated else {},
       self.template["default"],
     )
   
@@ -283,14 +283,14 @@ class PYTDL(Cmd):
     
     with YoutubeDL({"simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}) as ydl:
       info = ydl.extract_info(url, download = False)
-    info = self.filter_info(info)
+    info = self.filter_info(info) # type: ignore
     self.info_cache[url] = info
     return info
   
   def is_supported(self, url: str) -> bool:
     try:
       self.url_info(url)
-    except:
+    except Exception:
       if not self.is_quiet:
         print(url, "is not supported")
       return False
@@ -305,17 +305,16 @@ class PYTDL(Cmd):
   def is_playlist(self, url: str) -> bool:
     "Is a URL actually a playlist? If so, it'll be downloaded differently."
     info = self.url_info(url)
-    return ("playlist" in url or "youtube.com/c/" in url) or (
-      info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
-    )
+    return ("playlist" in url
+            or "youtube.com/c/" in url) or (info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None)
   
   def is_live(self, url: str) -> bool:
     "Is a video currently live? If so, we may need to wait until it's not."
     try:
       info = self.url_info(url)
       if "is_live" in info:
-        return info["is_live"]
-    except:
+        return info["is_live"] # type: ignore
+    except Exception:
       pass
     return False
   
@@ -337,12 +336,12 @@ class PYTDL(Cmd):
   
   def ensure_dir(self, url: str | Path):
     "Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."
-    Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parent.mkdir(parents = True, exist_ok = True)
-    # for parent in [
-    #   parent for parent in Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parents
-    #   if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
-    # ][::-1]:
-    #   parent.mkdir()
+    # Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parent.mkdir(parents = True, exist_ok = True) # can't use bc. tmpl'd parents
+    for parent in [
+      parent for parent in Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parents # type: ignore
+      if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
+    ][::-1]:
+      parent.mkdir()
   
   def readfile(self, path: str | Path) -> list[str]:
     "Reads lines from a file"
@@ -383,7 +382,8 @@ class PYTDL(Cmd):
         print(err)
         r = 1
     if r:
-      if not self.is_idle and yesno(f"Did {url} download properly?"): self.history.add(url)
+      if not self.is_idle and yesno(f"Did {url} download properly?"):
+        self.history.add(url)
     else:
       self.history.add(url)
   
@@ -393,7 +393,9 @@ class PYTDL(Cmd):
   
   def do_mode(self, arg = ""):
     "Prints details about the mode of operation and system."
-    yesify = lambda b: "Yes" if b else "No"
+    def yesify(b):
+      return "Yes" if b else "No"
+    
     print("Mode:", "Idle" if self.is_idle else "Interactive")
     print("ASCII:", yesify(self.is_ascii))
     print("Quiet:", yesify(self.is_quiet))
@@ -403,7 +405,7 @@ class PYTDL(Cmd):
     print("Sleep interval:", self.naptime, "seconds")
     print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
   
-  def do_config(self, arg: str = ""):
+  def do_config(self, arg: str | Path = ""):
     "Load a TOML configuration on a given path, default to config_file: config | config [path]"
     arg = Path(arg).expanduser()
     config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
@@ -456,8 +458,10 @@ class PYTDL(Cmd):
   
   def do_naptime(self, arg: str):
     "How long do we sleep between downloads (on average)?"
-    if arg.isdecimal(): self.naptime = int(arg)
-    if self.naptime < 0: self.naptime = 0
+    if arg.isdecimal():
+      self.naptime = int(arg)
+    if self.naptime < 0:
+      self.naptime = 0
     print(f"We sleep for {self.naptime}s on average.")
   
   def do_res(self, arg: str):
@@ -506,7 +510,7 @@ class PYTDL(Cmd):
       except KeyError as err:
         print(err)
       except Exception as err:
-        print(info)
+        print(info) # type: ignore
         print(err)
         raise err
   
@@ -529,7 +533,8 @@ class PYTDL(Cmd):
         if len(url) > 4: # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
           if not check_supported or self.is_supported(url):
             self.queue[url] = url
-    if temp: self.queue |= temp
+    if temp:
+      self.queue |= temp
     for url in self.queue:
       self.deleted.discard(url) # If we add it back, it should stay, unless we delete again, etc.
   
@@ -539,34 +544,35 @@ class PYTDL(Cmd):
       if len(url) and url in self.queue and yesno(f"Do you want to remove {url} from the queue?"):
         del self.queue[url]
         self.deleted.add(url)
-        if url in self.info_cache: del self.info_cache[url]
+        if url in self.info_cache:
+          del self.info_cache[url]
       if len(url) and url in self.history and yesno(f"Do you want to remove {url} from the history?"):
         self.history -= {url}
-        if url in self.info_cache: del self.info_cache[url]
+        if url in self.info_cache:
+          del self.info_cache[url]
   
-  def do_drop(self, arg: str):
+  def do_drop(self, arg: str | Path):
     "Drop the queue: drop | drop [queue file]"
-    path = arg
-    if len(path) == 0:
-      path = self.queue_file
+    if isinstance(arg, str) and len(arg) == 0:
+      arg = self.queue_file
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
-    if len(self.queue): print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
+    if len(self.queue):
+      print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
     if yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?") and yesno("Are you sure about this?"):
       self.queue.clear()
-    if yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?"
-             ) and yesno("Are you sure about this?"):
-      self.writefile(self.queue_file, "")
-    self.do_forget(self)
+    if yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?") and yesno("Are you sure about this?"):
+      self.writefile(arg, [])
+    self.do_forget()
   
-  def do_forget(self, arg: str = ""):
+  def do_forget(self, arg: str | Path = ""):
     "Forget all current known history: forget | forget [history file]"
-    if len(arg) == 0:
+    if isinstance(arg, str) and len(arg) == 0:
       arg = self.history_file
     if yesno("Do you want to forget the history of dl'd videos?") and yesno("Are you sure about this?"):
       self.history.clear()
       self.info_cache.clear()
     if yesno("Do you want to forget the history file?") and yesno("Are you sure about this?"):
-      self.writefile(arg, "")
+      self.writefile(arg, [])
   
   def do_get(self, arg: str | list[str]):
     "Get the video from given URLs: get [url] [...] | ! [url] [...]"
@@ -580,7 +586,7 @@ class PYTDL(Cmd):
             url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?"))
           ) or "playlist" in url:
             set_title(f"[{i}/{len(urls)}] {url}")
-            if self.is_live(url) and (self.is_idle or yesno(f"Currently live, shall we skip and try again later?")):
+            if self.is_live(url) and (self.is_idle or yesno("Currently live, shall we skip and try again later?")):
               still_live.append(url)
               continue
             self.download(url)
@@ -593,14 +599,15 @@ class PYTDL(Cmd):
     else:
       print("No videos to download")
     self.update_history()
-    if len(still_live): self.do_wait(" ".join(still_live))
+    if len(still_live):
+      self.do_wait(" ".join(still_live))
   
   def do_getall(self, arg: str = ""):
     "Get the videos in the queue, including any from a given file: getall [file] | . [file]"
     set_title("organising queue")
     if len(arg) or len(self.queue) == 0:
       self.do_load(arg)
-    self.do_get(self.queue)
+    self.do_get(list(self.queue))
   
   def do_load(self, arg: str = "", /, check_supported = True):
     "Load the contents of a file into the queue (add a - to not load the history): load [file] | load- [file] | : [file] | :- [file]"
@@ -614,7 +621,8 @@ class PYTDL(Cmd):
     post = len(self.queue)
     if post > pre:
       print(f"Added {post-pre} URLs from {path}")
-    if get_history: self.update_history()
+    if get_history:
+      self.update_history()
     set_title(f"loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
   
   def do_save(self, arg: str = ""):
@@ -628,13 +636,15 @@ class PYTDL(Cmd):
     if len(lines := self.readfile(path)):
       queue |= {line: line for line in lines}
     if len(queue):
-      self.writefile(path, (url for url in queue if url not in self.history and url not in self.deleted))
-    if set_history: self.update_history()
+      self.writefile(path, [url for url in queue if url not in self.history and url not in self.deleted])
+    if set_history:
+      self.update_history()
   
   def do_wait(self, arg: str = ""):
     "Wait on currently live videos, checking in slowing intervals from 10s to 10mins: wait | wait [url] [...]"
     urls, i = arg.split(), 0
-    if len(arg) == 0 or len(urls) == 0: urls = list(self.queue)
+    if len(arg) == 0 or len(urls) == 0:
+      urls = list(self.queue)
     elapsed, intervals = 0, [10, 30, 60]
     wait_next = list(zip(intervals, intervals[1:] + [3600 * 24]))
     while len(urls):
@@ -643,7 +653,8 @@ class PYTDL(Cmd):
       if self.is_live(url):
         wait, next_wait = wait_next[i]
         elapsed += wait
-        if elapsed > next_wait * 2 and i < len(intervals) - 1: i += 1
+        if elapsed > next_wait * 2 and i < len(intervals) - 1:
+          i += 1
         set_title(f"waiting on {url}, checking in {naturaltime(wait, future=True)}")
         try:
           sleep(wait + randint(0, wait // 3) + random()) # w/ jitter
@@ -662,7 +673,10 @@ class PYTDL(Cmd):
     merge_subs(path)
   
   def do_clean(self, arg: str = ""):
-    "Cleans leading '0 ' and trailing ' - ' and '.' from videos, such as for single-season shows without titles on its episodes. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory]"
+    """
+    Cleans leading '0 ' and trailing ' - ' and '.' from videos, such as for single-season shows without titles on its episodes.
+    Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory]
+    """
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
@@ -680,7 +694,7 @@ class PYTDL(Cmd):
     "Exit PYTDL"
     logging.debug("Exitting sequence started")
     self.do_save(arg)
-    set_title(f"exitting")
+    set_title("exitting")
     arg = Path(arg).expanduser()
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
     logging.debug(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
