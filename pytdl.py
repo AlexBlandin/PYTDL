@@ -40,8 +40,8 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
     if reply in no_list:
       return False
 
-def filter_maker(lvl):
-  level: int = getattr(logging, lvl)
+def filter_maker(level):
+  level = getattr(logging, level)
   
   def filter(record: logging.LogRecord) -> bool:
     return record.levelno <= level
