@@ -41,10 +41,10 @@ def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(
 def filter_maker(level):
   level = getattr(logging, level)
   
-  def filter(record: logging.LogRecord) -> bool:
+  def fltr(record: logging.LogRecord) -> bool:
     return record.levelno <= level
   
-  return filter
+  return fltr
 
 class PYTDL(Cmd):
   """
