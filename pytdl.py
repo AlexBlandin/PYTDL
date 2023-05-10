@@ -408,17 +408,26 @@ class PYTDL(Cmd):
     arg = Path(arg).expanduser()
     config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
     
-    def __rec(old, new):
+    def __rec(old: dict, new: dict, path: list[str]):
+      "Recursively update a dictionary according to the implicit schema of its existing keys/structure and types"
       for k, v in new.items():
-        if isinstance(v, dict) and k in old:
-          __rec(old[k], v)
+        pth = path + [k]
+        if k in old and isinstance(v, dict):
+          __rec(old[k], v, pth)
+        elif k in old and isinstance(v, type(old[k])):
+          logging.info(f"Config {'.'.join(map(str, pth))} = {v}")
+          old[k] = v
         elif k in old:
+          logging.warning(f"Config {'.'.join(map(str, pth))} was set to {v} ({type(v)}) but the default is of type ({type(old[k])})")
+          old[k] = v
+        else:
+          logging.warning(f"Config {'.'.join(map(str, pth))} has been loaded but is not present in the default")
           old[k] = v
     
     for key, val in config.items():
-      if (key in self.__dict__ or key in PYTDL.__dict__) and (isinstance(val, type(self.__getattribute__(key)))):
+      if (key in self.__dict__ or key in PYTDL.__dict__) and isinstance(val, type(self.__getattribute__(key))):
         if isinstance(val, dict):
-          __rec(self.__getattribute__(key), val)
+          __rec(self.__getattribute__(key), val, [key])
         else:
           self.__setattr__(key, val)
     
