@@ -21,7 +21,6 @@ import pytomlpp as toml
 # TODO: better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
 # 2: dynamic truncation of fields we can safely truncate (title, etc), so we never lose id etc
-# TODO: post-processing, cleaning up file names etc, may help with this
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
@@ -681,14 +680,17 @@ class PYTDL(Cmd):
   
   def do_clean(self, arg: str = ""):
     """
-    Cleans leading '0 ' and trailing ' - ' and '.' from videos, such as for single-season shows without titles on its episodes.
+    Cleans leading '0 ', trailing ' - ' and '.', and '  ' from file names, such as for single-season shows or those with missing fields.
     Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory]
     """
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
-        vid.rename(vid.with_stem(vid.stem.removeprefix("0 ").strip().removesuffix(".").removesuffix(" -")))
+        new_stem = vid.stem.removeprefix("0 ").strip().removesuffix(".").removesuffix(" -")
+        while "  " in new_stem:
+          new_stem = new_stem.replace("  ", " ")
+        vid.rename(vid.with_stem(new_stem))
   
   def do_clear(self, arg = None):
     "Clear the screen"
