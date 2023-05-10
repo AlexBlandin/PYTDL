@@ -20,10 +20,8 @@ import pytomlpp as toml
 
 # TODO: better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
-# 2: dynamic truncation from fields we can safely truncate (title, etc) so we never lose id etc
-# TODO: look into post-processing, can we clean up file names, etc, may help with these
-
-# TODO: MRU caching to a file so we don't need to make so many spurious lookups between bootup, etc
+# 2: dynamic truncation of fields we can safely truncate (title, etc), so we never lose id etc
+# TODO: post-processing, cleaning up file names etc, may help with this
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
