@@ -743,5 +743,5 @@ class PYTDL(Cmd):
 
 if __name__ == "__main__":
   os.chdir(Path.home()) # so we're always somewhere safe
-  logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S" # so we
+  logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S"
   PYTDL().cmdloop()
