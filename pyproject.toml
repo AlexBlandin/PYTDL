@@ -43,6 +43,7 @@ coalesce_brackets = true
 dedent_closing_brackets = true
 indent_dictionary_value = true
 indent_blank_lines = true
+join_multiple_lines = false
 space_between_ending_comma_and_closing_bracket = true
 spaces_around_default_or_named_assign = true
 spaces_before_comment = 1
