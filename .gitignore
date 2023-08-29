@@ -4,6 +4,7 @@ config.toml
 history.txt
 secrets.toml
 cookies/
+queues/
 
 # Dev files
 info/

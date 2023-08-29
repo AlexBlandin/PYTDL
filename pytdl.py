@@ -210,12 +210,13 @@ class PYTDL(Cmd):
           )
       }
     },
-    "crunchyroll": {
+    "crunchyroll": { # doesn't work currently as there's no way to pass user-agent
       "subtitleslangs": ["en-US"],
       "writesubtitles": True,
-      # "username": secrets["crunchyroll"]["username"], # example of how it looks
-      # "password": secrets["crunchyroll"]["password"], # example of how it looks
-      "cookiefile": str(cookies / "crunchy.txt"),
+      "username": secrets["crunchyroll"]["username"],
+      "password": secrets["crunchyroll"]["password"],
+      # "cookiefile": str(cookies / "crunchy.txt"),
+      # "user-agent": str(cookies / "useragent.txt"),
       "outtmpl": {
         "default":
           str(
@@ -285,6 +286,7 @@ class PYTDL(Cmd):
     return info
   
   def is_supported(self, url: str) -> bool:
+    "Check if the URL is supported" # TODO: speedup, url_info is way too slow rn, probably better to cache a domain to disk so we can just say "it's on this site, so it's probably viable", perhaps as part of history, just as a quick check? or I do a better system where when we process them, if we find it's now no-longer supported (since this assumes it remains) then we kick that URL to a different track to handle it
     try:
       self.url_info(url)
     except Exception:
@@ -526,7 +528,7 @@ class PYTDL(Cmd):
       info = self.url_info(url)
       Path(f"{info['id']}.json").write_text(json.dumps(info))
   
-  def do_add(self, arg: str, /, check_supported = True):
+  def do_add(self, arg: str, /, check_supported = False):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
     temp = None
     if len(arg):
