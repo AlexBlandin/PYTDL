@@ -286,7 +286,13 @@ class PYTDL(Cmd):
     return info
   
   def is_supported(self, url: str) -> bool:
-    "Check if the URL is supported" # TODO: speedup, url_info is way too slow rn, probably better to cache a domain to disk so we can just say "it's on this site, so it's probably viable", perhaps as part of history, just as a quick check? or I do a better system where when we process them, if we find it's now no-longer supported (since this assumes it remains) then we kick that URL to a different track to handle it
+    "Check if the URL is supported"
+    # TODO: speedup, url_info is way too slow rn, probably better to cache a
+    # domain to disk so we can just say "it's on this site, so it's probably
+    # viable", perhaps as part of history, just as a quick check? or I do a
+    # better system where when we process them, if we find it's now no-longer
+    # supported (since this assumes it remains) then we kick that URL to a
+    # different track to handle it
     try:
       self.url_info(url)
     except Exception:
