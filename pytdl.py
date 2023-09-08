@@ -1,5 +1,6 @@
 from collections import ChainMap
 from pathlib import Path
+import re
 from typing import Any
 from random import randint, random
 from time import sleep
@@ -25,17 +26,20 @@ import pytomlpp as toml
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
 
-def yesno(msg = "", accept_return = True, replace_lists = False, yes_list = set(), no_list = set()):
+def yesno(msg = "", accept_return = True, yes: set[str] = {"y", "ye", "yes"}, no: set[str] = {"n", "no"}):
   "Keep asking until they say yes or no"
-  yes_list = yes_list if replace_lists else {"y", "ye", "yes"} | yes_list
-  no_list = no_list if replace_lists else {"n", "no"} | no_list
   fmt = "[Y/n]" if accept_return else "[y/N]"
   while True:
     reply = input(f"\r{msg} {fmt}: ").strip().lower()
-    if reply in yes_list or (accept_return and reply == ""):
+    if reply in yes or (accept_return and reply == ""):
       return True
-    if reply in no_list:
+    if reply in no:
       return False
+
+re_yt_vid = re.compile(r"v=[\w_\-]+")
+re_yt_fluff_list = re.compile(r"[\?&]list=[\w_\-]+")
+re_yt_fluff_index = re.compile(r"[\?&]index=[\w_\-]+")
+re_yt_fluff_pp = re.compile(r"[\?&]pp=[\w_\-]+")
 
 def filter_maker(level):
   level = getattr(logging, level)
@@ -365,6 +369,15 @@ class PYTDL(Cmd):
     self.writefile(self.history_file, sorted(self.history))
   
   def fixerupper(self, url: str):
+    if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
+      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_list, "", url)):
+        url = tmp
+      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_index, "", url)):
+        url = tmp
+      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_pp, "", url)):
+        url = tmp
+      if re.search(r"/watch&v=[\w_\-]+", url):
+        url = re.sub(r"/watch&v=", "/watch?v=", url)
     if "piped.kavin.rocks/" in url:
       url = url.replace("piped.kavin.rocks/", "youtube.com/")
     if "imgur.artemislena.eu/" in url:
