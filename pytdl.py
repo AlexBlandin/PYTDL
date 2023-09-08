@@ -261,7 +261,7 @@ class PYTDL(Cmd):
     return ChainMap(
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
-      {"playlistreverse": yesno("Do we start numbering this list from the first item (often the oldest)?")} if take_input and self.is_playlist(url) else {},
+      {"playlistreverse": yesno("Should we reverse the ordering playlist order?", False)} if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
       self.template["playlist"]
       if self.is_playlist(url) else self.template["show"] if self.is_show(url) else self.template["crunchyroll"] if self.is_crunchyroll(url) else
