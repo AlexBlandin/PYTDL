@@ -168,7 +168,7 @@ class PYTDL(Cmd):
       "skip_download": True,
       "writesubtitles": True,
     },
-    "dated": { # TODO: do a better day of setting this so it can be included in any...
+    "dated": { # TODO: do a better way of setting this so it can be included in any...
       "outtmpl": {
         "default":
           str(
