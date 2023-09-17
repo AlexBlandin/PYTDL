@@ -36,10 +36,20 @@ def yesno(msg = "", accept_return = True, yes: set[str] = {"y", "ye", "yes"}, no
     if reply in no:
       return False
 
-re_yt_vid = re.compile(r"v=[\w_\-]+")
-re_yt_fluff_list = re.compile(r"[\?&]list=[\w_\-]+")
-re_yt_fluff_index = re.compile(r"[\?&]index=[\w_\-]+")
-re_yt_fluff_pp = re.compile(r"[\?&]pp=[\w_\-]+")
+RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags = re.I | re.M) # regex by @stephenhay
+# RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M) # regex by @imme_emosol
+# RE_IS_URL_P3 = re.compile( # regex by @diegoperini
+#   r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",
+#   re.I | re.M
+# ) # PHP regex
+# RE_IS_URL_P4 = re.compile( # regex from the Spoon library
+#   r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",
+#   re.I | re.M # re.IGNORECASE | re.MULTILINE
+# ) # PHP regex?
+RE_YT_VID = re.compile(r"v=[\w_\-]+")
+RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-]+")
+RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-]+")
+RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-]+")
 
 def filter_maker(level):
   level = getattr(logging, level)
@@ -278,6 +288,15 @@ class PYTDL(Cmd):
     # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
     return info
   
+  def is_url(self, url: str) -> bool:
+    "probably, based on the regex patterns from @stephenhay, @imme_emosol, @diegoperini, and the Spoon Library, tried in that order to catch "
+    return RE_IS_URL_P1.match(url) is not None # for now, until I convert P2-4 to Python regex, just this
+    if RE_IS_URL_P1.match(url) is not None: # handles all positive cases and most negative edge cases
+      return True
+    # if RE_IS_URL_P2.match(url) is None or RE_IS_URL_P3.match(url) is None: # anything we don't match here covers for the rest of the negative edge cases
+    #   return False
+    # return RE_IS_URL_P4.match(url) is not None # so now any that don't pass are REALLY probably not URLs, etc, left to last due to being much slower (big regex)
+  
   def url_info(self, url: str) -> dict[str, dict[str, Any]]:
     "Get the infodict for a URL"
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
@@ -368,13 +387,13 @@ class PYTDL(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
   
-  def fixerupper(self, url: str):
+  def clean_url(self, url: str):
     if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
-      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_list, "", url)):
+      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_LIST, "", url)):
         url = tmp
-      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_index, "", url)):
+      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_INDEX, "", url)):
         url = tmp
-      if re.search(re_yt_vid, tmp := re.sub(re_yt_fluff_pp, "", url)):
+      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_PP, "", url)):
         url = tmp
       if re.search(r"/watch&v=[\w_\-]+", url):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
@@ -389,7 +408,7 @@ class PYTDL(Cmd):
   
   def download(self, url: str):
     "Actually download something"
-    url = self.fixerupper(url)
+    url = self.clean_url(url)
     with YoutubeDL(self.config(url)) as ydl:
       self.ensure_dir(url)
       try:
@@ -546,6 +565,15 @@ class PYTDL(Cmd):
     for url in urls.split():
       info = self.url_info(url)
       Path(f"{info['id']}.json").write_text(json.dumps(info))
+  
+  def do_echo(self, arg: str):
+    "Echoes all URLs as it would try to download them (cleaned up and with potential fixes for common typos etc)"
+    if len(arg) and len(q:= arg.split()):
+      for p in q:
+        if self.is_url(p):
+          print(self.clean_url(p))
+        else:
+          print(p)
   
   def do_add(self, arg: str, /, check_supported = False):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
