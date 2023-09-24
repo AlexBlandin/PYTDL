@@ -49,7 +49,7 @@ RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags = re.I | re.M) 
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
 RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-%]+")
 RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
-RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")
+RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+") # base64.urlsafe_b64decode(urllib.parse.unquote(Match(RE_YT_FLUFF_PP).group(0)))[3:] is the used search term
 
 def filter_maker(level):
   level = getattr(logging, level)
