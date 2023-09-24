@@ -47,9 +47,9 @@ RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags = re.I | re.M) 
 #   re.I | re.M # re.IGNORECASE | re.MULTILINE
 # ) # PHP regex?
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
-RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-]+")
-RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-]+")
-RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-]+")
+RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-%]+")
+RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
+RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")
 
 def filter_maker(level):
   level = getattr(logging, level)
@@ -295,7 +295,7 @@ class PYTDL(Cmd):
       return True
     # if RE_IS_URL_P2.match(url) is None or RE_IS_URL_P3.match(url) is None: # anything we don't match here covers for the rest of the negative edge cases
     #   return False
-    # return RE_IS_URL_P4.match(url) is not None # so now any that don't pass are REALLY probably not URLs, etc, left to last due to being much slower (big regex)
+    # return RE_IS_URL_P4.match(url) is not None # so now any that don't pass are REALLY probably not URLs, etc, last due to being much slower (big regex)
   
   def url_info(self, url: str) -> dict[str, dict[str, Any]]:
     "Get the infodict for a URL"
