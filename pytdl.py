@@ -1,5 +1,6 @@
 from collections import ChainMap
 from pathlib import Path
+import itertools as it
 import re
 from typing import Any
 from random import randint, random
@@ -25,6 +26,10 @@ import pytomlpp as toml
 
 def set_title(s: str):
   print(f"\33]0;PYTDL: {s}\a", end = "", flush = True)
+
+def unique_list(xs):
+  """reduce a list to only its unique elements `[1,1,2,7,2,4] -> [1,2,7,4]`"""
+  return list(dict(zip(xs, it.repeat(0))))
 
 def yesno(msg = "", accept_return = True, yes: set[str] = {"y", "ye", "yes"}, no: set[str] = {"n", "no"}):
   "Keep asking until they say yes or no"
@@ -374,13 +379,13 @@ class PYTDL(Cmd):
   def readfile(self, path: str | Path) -> list[str]:
     "Reads lines from a file"
     if (f := Path(path).expanduser()).is_file():
-      return list(filter(None, map(str.strip, f.read_text(encoding = "utf8").splitlines())))
+      return unique_list(map(self.clean_url, filter(None, map(str.strip, f.read_text(encoding = "utf8").splitlines()))))
     return []
   
   def writefile(self, path: str | Path, lines: list):
     "Writes lines to a file"
     f = Path(path).expanduser()
-    f.write_text("\n".join(filter(None, lines)), encoding = "utf8", newline = "\n")
+    f.write_text("\n".join(unique_list(map(self.clean_url, filter(None, lines)))), encoding = "utf8", newline = "\n")
   
   def update_history(self):
     "Update the history file"
