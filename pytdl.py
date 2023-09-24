@@ -406,9 +406,9 @@ class PYTDL(Cmd):
         url = url.replace("imgur.artemislena.eu/", "i.imgur.com/")
     return url
   
-  def download(self, url: str):
+  def download(self, raw_url: str):
     "Actually download something"
-    url = self.clean_url(url)
+    url = self.clean_url(raw_url)
     with YoutubeDL(self.config(url)) as ydl:
       self.ensure_dir(url)
       try:
@@ -420,9 +420,9 @@ class PYTDL(Cmd):
         r = 1
     if r:
       if not self.is_idle and yesno(f"Did {url} download properly?"):
-        self.history.add(url)
+        self.history.add(raw_url)
     else:
-      self.history.add(url)
+      self.history.add(raw_url)
   
   #################
   # User Settings #
