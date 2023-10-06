@@ -459,13 +459,13 @@ class PYTDL(Cmd):
         if k in old and isinstance(v, dict):
           __rec(old[k], v, pth)
         elif k in old and isinstance(v, type(old[k])):
-          logging.info(f"Config {'.'.join(map(str, pth))} = {v}")
+          logging.info(f"Config {".".join(map(str, pth))} = {v}")
           old[k] = v
         elif k in old:
-          logging.warning(f"Config {'.'.join(map(str, pth))} was set to {v} ({type(v)}) but the default is of type ({type(old[k])})")
+          logging.warning(f"Config {".".join(map(str, pth))} was set to {v} ({type(v)}) but the default is of type ({type(old[k])})")
           old[k] = v
         else:
-          logging.warning(f"Config {'.'.join(map(str, pth))} has been loaded but is not present in the default")
+          logging.warning(f"Config {".".join(map(str, pth))} has been loaded but is not present in the default")
           old[k] = v
     
     for key, val in config.items():
@@ -555,7 +555,7 @@ class PYTDL(Cmd):
           url = u
         info = self.url_info(url)
         print(f"URL: {url}")
-        print(f"Title: {info['fulltitle']}")
+        print(f"Title: {info["fulltitle"]}")
         print("Twitch.tv" if self.is_twitch(url) else "Crunchyroll" if self.is_crunchyroll(url) else "Default")
         print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
       except KeyError as err:
@@ -569,7 +569,7 @@ class PYTDL(Cmd):
     "Dumps all info of given URLs to JSON files in CWD: dump [url] [...]"
     for url in urls.split():
       info = self.url_info(url)
-      Path(f"{info['id']}.json").write_text(json.dumps(info))
+      Path(f"{info["id"]}.json").write_text(json.dumps(info))
   
   def do_echo(self, arg: str):
     "Echoes all URLs as it would try to download them (cleaned up and with potential fixes for common typos etc)"
@@ -638,8 +638,8 @@ class PYTDL(Cmd):
     "Get the video from given URLs: get [url] [...] | ! [url] [...]"
     still_live, urls = [], arg.split() if isinstance(arg, str) else arg
     if len(urls):
-      set_title(f"downloading {len(urls)} video{'s'*(len(urls) != 1)}")
-      print(f"Getting {len(urls)} video{'s'*(len(urls) != 1)}")
+      set_title(f"downloading {len(urls)} video{"s"*(len(urls) != 1)}")
+      print(f"Getting {len(urls)} video{"s"*(len(urls) != 1)}")
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii = self.is_ascii, ncols = 100, unit = "vid"):
           if self.is_supported(url) and (
@@ -683,7 +683,7 @@ class PYTDL(Cmd):
       print(f"Added {post-pre} URLs from {path}")
     if get_history:
       self.update_history()
-    set_title(f"loaded {len(self.queue)} videos {f', {len(self.queue)-pre} new' if pre else ''}")
+    set_title(f"loaded {len(self.queue)} videos {f", {len(self.queue)-pre} new" if pre else ""}")
   
   def do_save(self, arg: str = ""):
     "Save the queue to a file (defaults to queue_file, add a - to not save the history): save [file] | save- [file] | # [file] | #- [file]"
