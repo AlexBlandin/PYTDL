@@ -15,22 +15,43 @@ mutagen = "^1.45.1"
 beautifulsoup4 = "^4.11.1"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.5"
+ruff = "^0.1.2"
 yapf = "^0.32.0"
 pylint = "^3.0.0"
-isort = "^5.12.0"
+# isort = "^5.12.0" # deprecated, ruff has (mostly) replaced these
+# pyupgrade = "^3.15.0" # deprecated, ruff has (mostly) replaced these
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
-target-version = "py310"
+select = ["E", "F"]
+# ignore = ["E501"] # E501 (line length  violations)
+unfixable = ["B", "SIM", "TRY", "RUF"]
 line-length = 160
+target-version = "py310"
 
-[tool.ruff.lint]
-select = ["F", "E", "W", "N", "UP", "B", "SIM", "PD", "PL", "TRY", "FLY", "NPY", "PERF", "FURB", "RUF"]
-ignore = ["W293", "E261", "PLR2004", "PLR0912"]
+[tool.ruff.lint] # they're being moved into here?
+select = ["E", "F"]
+# ignore = ["E501"] # E501 (line length  violations)
+unfixable = ["B", "SIM", "TRY", "RUF"]
+line-length = 160
+target-version = "py310"
+
+[tool.ruff.isort]
+ensure_newline_before_comments = true
+include_trailing_comma = true
+lines_after_imports = 1
+use_parentheses = true
+comment_prefix = " #"
+multi_line_output = 3
+force_grid_wrap = 0
+reverse_sort = true
+length_sort = true
+line_length = 160
+from_first = true
+indent = "  "
 
 [tool.yapf]
 based_on_style = "pep8"
