@@ -1,7 +1,5 @@
 from collections import ChainMap
 from pathlib import Path
-import itertools as it
-import re
 from typing import Any
 from random import randint, random
 from time import sleep
@@ -9,9 +7,11 @@ from cmd import Cmd
 from os import system as term
 import logging.handlers
 import logging.config
+import itertools as it
 import platform
-import logging # TODO: logging # setup, so just need to call logging.warning() etc directly now
+import logging # TODO: actually use logging.warning() etc now
 import json
+import re
 import os
 
 from merge_subs import merge_subs
@@ -31,8 +31,12 @@ def unique_list(xs):
   """reduce a list to only its unique elements `[1,1,2,7,2,4] -> [1,2,7,4]`"""
   return list(dict(zip(xs, it.repeat(0))))
 
-def yesno(msg = "", accept_return = True, yes: set[str] = {"y", "ye", "yes"}, no: set[str] = {"n", "no"}):
+def yesno(msg = "", accept_return = True, yes: set[str] | None = None, no: set[str] | None = None):
   "Keep asking until they say yes or no"
+  if no is None:
+    no = {"n", "no"}
+  if yes is None:
+    yes = {"y", "ye", "yes"}
   fmt = "[Y/n]" if accept_return else "[y/N]"
   while True:
     reply = input(f"\r{msg} {fmt}: ").strip().lower()
@@ -42,16 +46,18 @@ def yesno(msg = "", accept_return = True, yes: set[str] = {"y", "ye", "yes"}, no
       return False
 
 RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags = re.I | re.M) # regex by @stephenhay
-# RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M) # regex by @imme_emosol
-# RE_IS_URL_P3 = re.compile( # regex by @diegoperini
-#   r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",
-#   re.I | re.M
-# ) # PHP regex
-# RE_IS_URL_P4 = re.compile( # regex from the Spoon library
-#   r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",
-#   re.I | re.M # re.IGNORECASE | re.MULTILINE
-# ) # PHP regex?
+RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M) # regex by @imme_emosol
+RE_IS_URL_P3 = re.compile( # regex by @diegoperini
+  0*r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",
+  re.I | re.M
+) # PHP regex
+RE_IS_URL_P4 = re.compile( # regex from the Spoon library
+  0*r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",
+  re.I | re.M # re.IGNORECASE | re.MULTILINE
+) # PHP regex?
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
+RE_YT_VID_MANGLED = re.compile(r"/watch&v=[\w_\-]+")
+RE_YT_FLUFF_SI = re.compile(r"[\?&]si=[\w_\-%]+") # nasty tracking YT added
 RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-%]+")
 RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
 RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+") # base64.urlsafe_b64decode(urllib.parse.unquote(Match(RE_YT_FLUFF_PP).group(0)))[3:] is the used search term
@@ -72,13 +78,13 @@ class PYTDL(Cmd):
   """
   intro = "Download videos iteractively or from files. Type help or ? for a list of commands."
   prompt = "PYTDL> "
-  queue: dict[str, str] = {}
+  queue: dict[str, str]
   "Which URLs will we download from next"
-  history: set[str] = set()
+  history: set[str]
   "Which URLs have we downloaded from (successfully) already"
-  deleted: set[str] = set()
+  deleted: set[str]
   "Which URLs have we deleted from the queue or history"
-  info_cache: dict[str, dict[str, Any]] = {}
+  info_cache: dict[str, dict[str, Any]]
   "URL info we can save between uses"
   local = Path(__file__).parent
   "The local path is where PYTDL is installed"
@@ -122,7 +128,7 @@ class PYTDL(Cmd):
   fmt_date_only = "%(timestamp>%Y-%m-%d,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s"
   fmt_title = "%(title.:100)s"
   
-  log_config = {
+  log_config = { # noqa: RUF012
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
@@ -171,7 +177,7 @@ class PYTDL(Cmd):
   }
   "The configuration for logging, such that we can provide a log file and terminal output."
   
-  template = {
+  template = { # noqa: RUF012
     "audio": {
       "format": "bestaudio/best",
       "postprocessors": [{
@@ -327,8 +333,7 @@ class PYTDL(Cmd):
       if not self.is_quiet:
         print(url, "is not supported")
       return False
-    finally:
-      return True
+    return True
   
   def is_show(self, url: str) -> bool:
     "Is a URL for a show? If so, it'll have a different folder structure."
@@ -394,13 +399,19 @@ class PYTDL(Cmd):
   
   def clean_url(self, url: str):
     if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
+      # TODO: better system than this, actually semantically extract & discard
+      # for example, to deal with youtu.be/ExampleVid?si=creepytracking
+      # so we just pull out "oh, this is the vid" and discard the rest, really
+      # our current approach is just a "if we defluff and it stays valid, do so"
       if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_LIST, "", url)):
         url = tmp
       if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_INDEX, "", url)):
         url = tmp
       if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_PP, "", url)):
         url = tmp
-      if re.search(r"/watch&v=[\w_\-]+", url):
+      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_SI, "", url)):
+        url = tmp
+      if re.search(RE_YT_VID_MANGLED, url):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
     if "piped.kavin.rocks/" in url:
       url = url.replace("piped.kavin.rocks/", "youtube.com/")
@@ -418,8 +429,8 @@ class PYTDL(Cmd):
       self.ensure_dir(url)
       try:
         r = ydl.download(url)
-      except KeyboardInterrupt as err:
-        raise err
+      except KeyboardInterrupt:
+        raise
       except Exception as err:
         print(err)
         r = 1
@@ -452,10 +463,19 @@ class PYTDL(Cmd):
     arg = Path(arg).expanduser()
     config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
     
+    assert(self.__annotations__ == self.__class__.__annotations__) # no shennanigans... for now
+    for key, t in self.__annotations__.items(): # initialise annotated types
+      if key not in self.__dict__ and key not in self.__class__.__dict__:
+        if callable(t):
+          self.__dict__[key] = t()
+        else:
+          logging.exception(f"An unusable type {t} was annotated as a field in {type(self)} and could not be initialised")
+          raise TypeError(key, t)
+    
     def __rec(old: dict, new: dict, path: list[str]):
       "Recursively update a dictionary according to the implicit schema of its existing keys/structure and types"
       for k, v in new.items():
-        pth = path + [k]
+        pth = [*path, k]
         if k in old and isinstance(v, dict):
           __rec(old[k], v, pth)
         elif k in old and isinstance(v, type(old[k])):
@@ -539,8 +559,8 @@ class PYTDL(Cmd):
     print(f"There are {len(self.queue)} URLs in the queue")
     if len(self.queue):
       if len(arg):
-        for url in arg.split():
-          url = self.from_index(url)
+        for url_ in arg.split():
+          url = self.from_index(url_)
           if url:
             print(url)
       else:
@@ -549,21 +569,20 @@ class PYTDL(Cmd):
   
   def do_info(self, arg: str):
     "Print useful info for given URLs: info [url] [...] | info 0 5 -2 [url] [...]"
-    for url in arg.split():
+    for url_ in arg.split():
       try:
-        if (u := self.from_index(url)):
-          url = u
+        url = u if (u := self.from_index(url_)) else url_
         info = self.url_info(url)
         print(f"URL: {url}")
         print(f"Title: {info["fulltitle"]}")
         print("Twitch.tv" if self.is_twitch(url) else "Crunchyroll" if self.is_crunchyroll(url) else "Default")
         print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
-      except KeyError as err:
+      except KeyError as err: # noqa: PERF203
         print(err)
       except Exception as err:
         print(info) # type: ignore
         print(err)
-        raise err
+        raise
   
   def do_infodump(self, urls: str):
     "Dumps all info of given URLs to JSON files in CWD: dump [url] [...]"
@@ -584,15 +603,14 @@ class PYTDL(Cmd):
     "Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]"
     temp = None
     if len(arg):
-      if len(q := arg.split(maxsplit = 1)) > 1:
-        if q[0] == "front":
-          arg = q[1]
-          temp = dict(self.queue)
-          self.queue = {}
+      if len(q := arg.split(maxsplit = 1)) > 1 and q[0] == "front":
+        arg = q[1]
+        temp = dict(self.queue)
+        self.queue = {}
       for url in arg.split():
-        if len(url) > 4: # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
-          if not check_supported or self.is_supported(url):
-            self.queue[url] = url
+        # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
+        if len(url) > 4 and (not check_supported or self.is_supported(url)):
+          self.queue[url] = url
     if temp:
       self.queue |= temp
     for url in self.queue:
@@ -654,8 +672,8 @@ class PYTDL(Cmd):
       except KeyboardInterrupt:
         print()
         print("Stopped by user")
-      except Exception as err:
-        raise err
+      except Exception:
+        raise
     else:
       print("No videos to download")
     self.update_history()
@@ -706,7 +724,7 @@ class PYTDL(Cmd):
     if len(arg) == 0 or len(urls) == 0:
       urls = list(self.queue)
     elapsed, intervals = 0, [10, 30, 60]
-    wait_next = list(zip(intervals, intervals[1:] + [3600 * 24]))
+    wait_next = list(zip(intervals, intervals[1:] + [3600 * 24], strict = True))
     while len(urls):
       url = urls.pop(0)
       set_title(f"waiting on {url}")
