@@ -18,6 +18,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
+.ruff_cache/
 *.lock
 .Python
 build/
