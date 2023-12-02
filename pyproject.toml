@@ -6,7 +6,7 @@ authors = ["AlexBlandin"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-yt-dlp = "^2023.7.6"
+yt-dlp = "^2023.11.16"
 langcodes = "^3.3.0"
 tqdm = "^4.64.0"
 pytomlpp = "^1.0.10"
@@ -15,43 +15,27 @@ mutagen = "^1.45.1"
 beautifulsoup4 = "^4.11.1"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.5"
-yapf = "^0.32.0"
-pylint = "^3.0.0"
-isort = "^5.12.0"
+ruff = "^0.1.6"
+pylint = "^3.0.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
+indent-width = 2
+format.line-ending = "lf"
 target-version = "py310"
 line-length = 160
+preview = true
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "N", "UP", "B", "SIM", "PD", "PL", "TRY", "FLY", "NPY", "PERF", "FURB", "RUF"]
-ignore = ["W293", "E261", "PLR2004", "PLR0912"]
-
-[tool.yapf]
-based_on_style = "pep8"
-indent_width = 2
-continuation_indent_width = 2
-column_limit = 160
-blank_line_before_nested_class_or_def = false
-blank_lines_around_top_level_definition = 1
-coalesce_brackets = true
-dedent_closing_brackets = true
-indent_dictionary_value = true
-indent_blank_lines = true
-join_multiple_lines = false
-space_between_ending_comma_and_closing_bracket = true
-spaces_around_default_or_named_assign = true
-spaces_before_comment = 1
+ignore = ["E111", "E114","Q", "W293", "E261", "PLR2004", "PLR0912"]
 
 [tool.isort]
 ensure_newline_before_comments = true
 include_trailing_comma = true
-lines_after_imports = 1
 use_parentheses = true
 comment_prefix = " #"
 multi_line_output = 3
