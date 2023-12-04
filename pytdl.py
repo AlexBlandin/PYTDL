@@ -182,6 +182,8 @@ class PYTDL(Cmd):
       # japasm
     },
     "twitter": {
+      "username": secrets["twitter"]["username"],
+      "password": secrets["twitter"]["password"],
       # switch around so it used uploader_id,uploader bc display names are funky
     },
     "twitch": {
@@ -239,6 +241,8 @@ class PYTDL(Cmd):
       if self.is_show(url)
       else self.template["crunchyroll"]
       if self.is_crunchyroll(url)
+      else self.template["twitter"]
+      if self.is_twitter(url)
       else self.template["twitch"]
       if self.is_twitch(url)
       else self.template["podcast"]
@@ -323,6 +327,10 @@ class PYTDL(Cmd):
   def is_twitch(self, url: str) -> bool:
     "Is a URL for twitch.tv?"
     return "twitch.tv" in url
+
+  def is_twitter(self, url: str) -> bool:
+    "Is a URL for twitter.com?"
+    return "twitter.com" in url
 
   def is_crunchyroll(self, url: str) -> bool:
     "Is a URL for Crunchyroll?"
