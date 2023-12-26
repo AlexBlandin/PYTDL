@@ -1,24 +1,25 @@
+import itertools as it
+import json
+import logging  # TODO: actually use logging.warning() etc now
+import logging.config
+import logging.handlers
+import os
+import platform
+import re
+from cmd import Cmd
 from collections import ChainMap
+from os import system as term
 from pathlib import Path
-from typing import Any
 from random import randint, random
 from time import sleep
-from cmd import Cmd
-from os import system as term
-import logging.handlers
-import logging.config
-import itertools as it
-import platform
-import logging  # TODO: actually use logging.warning() etc now
-import json
-import re
-import os
+from typing import Any
+
+import pytomlpp as toml
+from humanize import naturaltime
+from tqdm import tqdm
+from yt_dlp import YoutubeDL
 
 from merge_subs import merge_subs
-from humanize import naturaltime
-from yt_dlp import YoutubeDL
-from tqdm import tqdm
-import pytomlpp as toml
 
 # TODO: better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
@@ -43,7 +44,7 @@ def yesno(msg="", accept_return=True, yes: set[str] | None = None, no: set[str] 
   fmt = "[Y/n]" if accept_return else "[y/N]"
   while True:
     reply = input(f"\r{msg} {fmt}: ").strip().lower()
-    if reply in yes or (accept_return and reply == ""):
+    if reply in yes or (accept_return and not reply):
       return True
     if reply in no:
       return False
@@ -53,12 +54,12 @@ RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags=re.I | re.M)  #
 RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M)  # regex by @imme_emosol
 RE_IS_URL_P3 = re.compile(  # regex by @diegoperini
   0
-  * r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",
+  * r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",  # noqa: E501
   re.I | re.M,
 )  # PHP regex
 RE_IS_URL_P4 = re.compile(  # regex from the Spoon library
   0
-  * r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",
+  * r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",  # noqa: E501
   re.I | re.M,  # re.IGNORECASE | re.MULTILINE
 )  # PHP regex?
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
@@ -78,7 +79,7 @@ def filter_maker(level):
   return fltr
 
 
-class PYTDL(Cmd):
+class PYTDL(Cmd):  # noqa: PLR0904
   """
   PYTDL itself.
 
@@ -257,12 +258,12 @@ class PYTDL(Cmd):
   # URL/Video Information #
   #########################
 
-  def filter_info(self, info: dict) -> dict[str, dict[str, Any]]:
+  def filter_info(self, info: dict) -> dict[str, dict[str, Any]]:  # noqa: PLR6301
     "Cleans an infodict of useless fields"
     # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
     return info
 
-  def is_url(self, url: str) -> bool:
+  def is_url(self, url: str) -> bool:  # noqa: PLR6301
     "probably, based on the regex patterns from @stephenhay, @imme_emosol, @diegoperini, and the Spoon Library, tried in that order to catch"
     return RE_IS_URL_P1.match(url) is not None  # for now, until I convert P2-4 to Python regex, just this
     if RE_IS_URL_P1.match(url) is not None:  # handles all positive cases and most negative edge cases
@@ -320,19 +321,19 @@ class PYTDL(Cmd):
       pass
     return False
 
-  def is_podcast(self, url: str) -> bool:
+  def is_podcast(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL a podcast?"
     return "podcast" in url
 
-  def is_twitch(self, url: str) -> bool:
+  def is_twitch(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for twitch.tv?"
     return "twitch.tv" in url
 
-  def is_twitter(self, url: str) -> bool:
+  def is_twitter(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for twitter.com?"
     return "twitter.com" in url
 
-  def is_crunchyroll(self, url: str) -> bool:
+  def is_crunchyroll(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for Crunchyroll?"
     return "crunchyroll" in url
 
@@ -366,7 +367,7 @@ class PYTDL(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
 
-  def clean_url(self, url: str):
+  def clean_url(self, url: str):  # noqa: PLR6301
     if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
       # TODO: better system than this, actually semantically extract & discard
       # for example, to deal with youtu.be/ExampleVid?si=creepytracking
@@ -631,7 +632,7 @@ class PYTDL(Cmd):
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii=self.is_ascii, ncols=100, unit="vid"):
           if (
-            self.is_supported(url)
+            self.is_supported(url)  # noqa: PLR0916
             and (url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?")))
             or "playlist" in url
           ):
@@ -717,12 +718,12 @@ class PYTDL(Cmd):
         self.do_get(url)
         elapsed, i = 0, 0  # reset since we just spent a chunk of time downloading
 
-  def do_merge(self, arg: str = ""):
+  def do_merge(self, arg: str = ""):  # noqa: PLR6301
     "Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     merge_subs(path)
 
-  def do_clean(self, arg: str = ""):
+  def do_clean(self, arg: str = ""):  # noqa: PLR6301
     """
     Cleans leading '0 ', trailing ' - ' and '.', and '  ' from file names, such as for single-season shows or those with missing fields.
     Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory]
@@ -736,7 +737,7 @@ class PYTDL(Cmd):
           new_stem = new_stem.replace("  ", " ")
         vid.rename(vid.with_stem(new_stem))
 
-  def do_clear(self, arg=None):
+  def do_clear(self, arg=None):  # noqa: PLR6301
     "Clear the screen"
     if platform.system() == "Windows":
       term("cls")

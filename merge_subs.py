@@ -1,35 +1,38 @@
 #!/usr/bin/env python3
-from subprocess import run
 from pathlib import Path
 from pprint import pprint
+from subprocess import run
 
 import langcodes  # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
 
-nodot = lambda s: s.removeprefix(".")
+
+def nodot(s):
+  return s.removeprefix(".")
 
 
 def merge_subs(path=Path()):
   "A handy utility to merge .ass subtitles into .mp4 videos non-destructively (by switching to .mkv)"
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(Path.is_file, path.rglob("*.ass")))
-  pair = {vid: None for vid in vids}
+  _pair: dict[Path, Path | None] = {vid: None for vid in vids}
   lang = {}
   for sub in subs:
-    l = next(filter(langcodes.tag_is_valid, map(nodot, sub.suffixes)), None)
-    if l:
-      v = sub.with_stem(sub.stem.removesuffix(f".{l}")).with_suffix(".mp4")
-      if v in pair:
-        lang[sub] = langcodes.get(l).to_alpha3()
-        pair[v] = sub
+    suffix = next(filter(langcodes.tag_is_valid, map(nodot, sub.suffixes)), None)
+    if suffix:
+      v = sub.with_stem(sub.stem.removesuffix(f".{suffix}")).with_suffix(".mp4")
+      if v in _pair:
+        lang[sub] = langcodes.get(suffix).to_alpha3()
+        _pair[v] = sub
     else:
       print(f"We are missing a language code (i.e. en-US) on {sub}")
 
-  pair: dict[Path, Path] = {vid: sub for vid, sub in pair.items() if sub is not None}
+  pair: dict[Path, Path] = {vid: sub for vid, sub in _pair.items() if sub is not None}
   for vid, sub in pair.items():
     for _ in range(2):  # how many tries
       if (
         r := run(
-          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" '
+          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" ',  # noqa: E501
+          check=False,
         )
       ).returncode:
         pprint(r)
@@ -41,7 +44,7 @@ def merge_subs(path=Path()):
       try:
         vid.unlink()
         sub.unlink()
-      except:  # we fail to unlink if, say, someone is already watching it!
+      except Exception:  # we fail to unlink if, say, someone is already watching it!
         pass
 
 

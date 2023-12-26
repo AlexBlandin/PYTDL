@@ -31,7 +31,7 @@ preview = true
 
 [tool.ruff.lint]
 select = ["F", "E", "W", "N", "UP", "B", "SIM", "PD", "PL", "TRY", "FLY", "NPY", "PERF", "FURB", "RUF"]
-ignore = ["E111", "E114","Q", "W293", "E261", "PLR2004", "PLR0912"]
+ignore = ["N803", "N806", "E111", "E114", "Q", "W293", "E261", "PLR2004", "PLR0912"]
 
 [tool.isort]
 ensure_newline_before_comments = true
