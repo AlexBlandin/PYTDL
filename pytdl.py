@@ -383,13 +383,15 @@ class PYTDL(Cmd):  # noqa: PLR0904
         url = tmp
       if re.search(RE_YT_VID_MANGLED, url):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
+    if "youtube.com/shorts/" in url:
+      url = url.replace("/shorts/", "/watch?v=", 1)
     if "piped.kavin.rocks/" in url:
-      url = url.replace("piped.kavin.rocks/", "youtube.com/")
+      url = url.replace("piped.kavin.rocks/", "youtube.com/", 1)
     if "imgur.artemislena.eu/" in url:
       if "imgur.artemislena.eu/gallery/" in url:
-        url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/")
+        url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/", 1)
       else:
-        url = url.replace("imgur.artemislena.eu/", "i.imgur.com/")
+        url = url.replace("imgur.artemislena.eu/", "i.imgur.com/", 1)
     return url
 
   def download(self, raw_url: str):
