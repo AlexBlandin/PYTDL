@@ -193,6 +193,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       "fixup": "never",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s")},
     },
+    "youtube": {},  # {"embed_chapters": True, "embed_thumbnail": True},
     "crunchyroll": {  # doesn't work currently as there's no way to pass user-agent
       "subtitleslangs": ["en-US"],
       "writesubtitles": True,
@@ -235,7 +236,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
       {"playlistreverse": yesno("Should we reverse the ordering playlist order?", False)} if take_input and self.is_playlist(url) else {},
-      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres else {},
+      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres and not self.is_tenor(url) else {},
       self.template["playlist"]
       if self.is_playlist(url)
       else self.template["show"]
@@ -250,6 +251,8 @@ class PYTDL(Cmd):  # noqa: PLR0904
       if self.is_podcast(url)
       else self.template["dated"]
       if self.is_dated
+      else self.template["youtube"]
+      if self.is_youtube(url)
       else {},
       self.template["default"],
     )
@@ -336,6 +339,14 @@ class PYTDL(Cmd):  # noqa: PLR0904
   def is_crunchyroll(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for Crunchyroll?"
     return "crunchyroll" in url
+
+  def is_tenor(self, url: str) -> bool:  # noqa: PLR6301
+    "Is a URL for Tenor?"
+    return "tenor.com" in url
+
+  def is_youtube(self, url: str) -> bool:  # noqa: PLR6301
+    "Is a URL for Youtube?"
+    return "youtube.com/" in url or "youtu.be/" in url
 
   #######
   # I/O #
