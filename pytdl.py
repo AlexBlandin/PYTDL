@@ -236,7 +236,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
       {"playlistreverse": yesno("Should we reverse the ordering playlist order?", False)} if take_input and self.is_playlist(url) else {},
-      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]"} if self.maxres and not self.is_tenor(url) else {},
+      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"} if self.maxres else {},
       self.template["playlist"]
       if self.is_playlist(url)
       else self.template["show"]
@@ -343,6 +343,10 @@ class PYTDL(Cmd):  # noqa: PLR0904
   def is_tenor(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for Tenor?"
     return "tenor.com" in url
+
+  def is_instagram(self, url: str) -> bool:  # noqa: PLR6301
+    "Is a URL for Instagram"
+    return "instagram.com" in url
 
   def is_youtube(self, url: str) -> bool:  # noqa: PLR6301
     "Is a URL for Youtube?"
