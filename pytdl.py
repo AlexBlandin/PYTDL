@@ -822,7 +822,10 @@ if __name__ == "__main__":
   if len(sys.argv) >= 2:
     pytdl.preloop()
     for op in map(str.strip, " ".join(sys.argv[1:]).split(",")):
-      pytdl.onecmd(op)
+      if op.startswith("cd "):
+        os.chdir(Path(op.removeprefix("cd ")))
+      else:
+        pytdl.onecmd(op)
     pytdl.do_exit()
     pytdl.postloop()
   else:
