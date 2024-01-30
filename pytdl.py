@@ -820,8 +820,11 @@ if __name__ == "__main__":
   logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S"
   pytdl = PYTDL()
   if len(sys.argv) >= 2:
+    pytdl.preloop()
     for op in map(str.strip, " ".join(sys.argv[1:]).split(",")):
       pytdl.onecmd(op)
+    pytdl.do_exit()
+    pytdl.postloop()
   else:
     os.chdir(Path.home())  # so we're always somewhere safe
     pytdl.cmdloop()
