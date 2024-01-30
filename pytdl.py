@@ -11,6 +11,7 @@ from collections import ChainMap
 from os import system as term
 from pathlib import Path
 from random import randint, random
+import sys
 from time import sleep
 from typing import Any
 
@@ -816,6 +817,11 @@ class PYTDL(Cmd):  # noqa: PLR0904
 
 
 if __name__ == "__main__":
-  os.chdir(Path.home())  # so we're always somewhere safe
   logging.Formatter.default_time_format = "%Y-%m-%d-%H-%M-%S"
-  PYTDL().cmdloop()
+  pytdl = PYTDL()
+  if len(sys.argv) >= 2:
+    for op in map(str.strip, " ".join(sys.argv[1:]).split(",")):
+      pytdl.onecmd(op)
+  else:
+    os.chdir(Path.home())  # so we're always somewhere safe
+    pytdl.cmdloop()
