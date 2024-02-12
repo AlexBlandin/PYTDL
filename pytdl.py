@@ -1,6 +1,17 @@
+"""Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
+
+Requirements:
+- ffmpeg
+- yt-dlp
+- tqdm
+- pytomlpp
+- humanize
+- langcodes
+"""
+
 import itertools as it
 import json
-import logging  # TODO: actually use logging.warning() etc now
+import logging  # TODO(alex): actually use logging.warning() etc now
 import logging.config
 import logging.handlers
 import os
@@ -9,11 +20,13 @@ import re
 import sys
 from cmd import Cmd
 from collections import ChainMap
+from collections.abc import Callable, Iterable
+from contextlib import suppress
 from os import system as term
 from pathlib import Path
 from random import randint, random
 from time import sleep
-from typing import Any
+from typing import Any, Literal, Self
 
 import pytomlpp as toml
 from humanize import naturaltime
@@ -22,21 +35,22 @@ from yt_dlp import YoutubeDL
 
 from merge_subs import merge_subs
 
-# TODO: better outtmpl approach, so we can have
+# TODO(alex): better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
 # 2: dynamic truncation of fields we can safely truncate (title, etc), so we never lose id etc
 
 
-def set_title(s: str):
+def set_title(s: str) -> None:
+  """Set the console title."""
   print(f"\33]0;PYTDL: {s}\a", end="", flush=True)
 
 
-def unique_list(xs):
+def unique_list(xs: Iterable) -> list:
   """Reduce a list to only its unique elements `[1,1,2,7,2,4] -> [1,2,7,4]`."""
   return list(dict(zip(xs, it.repeat(0))))
 
 
-def yesno(msg="", accept_return=True, yes: set[str] | None = None, no: set[str] | None = None):
+def yesno(msg: str = "", *, accept_return: bool = True, yes: set[str] | None = None, no: set[str] | None = None) -> bool:
   """Keep asking until they say yes or no."""
   if no is None:
     no = {"n", "no"}
@@ -71,8 +85,9 @@ RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
 RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")  # base64.urlsafe_b64decode(urllib.parse.unquote(Match(RE_YT_FLUFF_PP).group(0)))[3:] is the used search term
 
 
-def filter_maker(level):
-  level = getattr(logging, level)
+def filter_maker(level_name: str) -> Callable[..., bool]:
+  """Create a filter to remove all below, say, "WARNING"."""
+  level: int = getattr(logging, level_name)
 
   def fltr(record: logging.LogRecord) -> bool:
     return record.levelno <= level
@@ -169,7 +184,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       "skip_download": True,
       "writesubtitles": True,
     },
-    "dated": {  # TODO: do a better way of setting this so it can be included in any...
+    "dated": {  # TODO(alex): do a better way of setting this so it can be included in any...
       "outtmpl": {"default": str(Path.home() / "Videos" / f"{fmt_date_only} {fmt_title} [%(id)s].%(ext)s")},
     },
     "show": {
@@ -188,8 +203,8 @@ class PYTDL(Cmd):  # noqa: PLR0904
       # switch around so it used uploader_id,uploader bc display names are funky
     },
     "twitch": {
-      # "wait_for_video": (3,10) # TODO: how does this one work? should I use it?
-      # "live_from_start": True # TODO: is this how I want it to handle it?
+      # "wait_for_video": (3,10) # TODO(alex): how does this one work? should I use it?
+      # "live_from_start": True # TODO(alex): is this how I want it to handle it?
       "fixup": "never",
       "outtmpl": {"default": str(Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s")},
     },
@@ -213,13 +228,13 @@ class PYTDL(Cmd):  # noqa: PLR0904
       "fixup": "never",  # "warn",
       "retries": 20,
       "fragment_retries": 20,
-      # "sleep_interval": # TODO: dynamically fill in if a playlist etc has been submitted
+      # "sleep_interval": # TODO(alex): dynamically fill in if a playlist etc has been submitted
       # "max_sleep_interval:" # upper bound for random sleep
       # "add_metadata": True, # hopefully added in a future update
       # "embed_metadata": True, # hopefully added in a future update
       # "trim_file_name": True, # figure out how to do this better
-      # "logger": log, # TODO: this
-      # "download_archive": # set/path of already downloaded files, TODO: look into this
+      # "logger": log, # TODO(alex): this
+      # "download_archive": # set/path of already downloaded files, TODO(alex): look into this
       "windowsfilenames": True,
       "consoletitle": True,  # dlp sets progress in the console title
     },
@@ -230,12 +245,12 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # Format/Template Selection #
   #############################
 
-  def config(self, url: str, *, take_input=True) -> ChainMap[str, bool | str]:
+  def config(self: Self, url: str, *, take_input: bool = True) -> ChainMap[str, bool | str]:
     """Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)."""
     return ChainMap(
       {"quiet": self.is_quiet},
       self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
-      {"playlistreverse": yesno("Should we reverse the ordering playlist order?", False)} if take_input and self.is_playlist(url) else {},
+      {"playlistreverse": yesno("Should we reverse the ordering playlist order?", accept_return=False)} if take_input and self.is_playlist(url) else {},
       {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"} if self.maxres else {},
       self.template["playlist"]
       if self.is_playlist(url)
@@ -261,12 +276,12 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # URL/Video Information #
   #########################
 
-  def filter_info(self, info: dict) -> dict[str, dict[str, Any]]:  # noqa: PLR6301
+  def filter_info(self: Self, info: dict) -> dict[str, dict[str, Any]]:  # noqa: PLR6301
     """Cleans an infodict of useless fields."""
-    # TODO: remove useless info (fragments, etc.) so we have less mem. footprint
+    # TODO(alex): remove useless info (fragments, etc.) so we have less mem. footprint
     return info
 
-  def is_url(self, url: str) -> bool:  # noqa: PLR6301
+  def is_url(self: Self, url: str) -> bool:  # noqa: PLR6301
     """probably, based on the regex patterns from @stephenhay, @imme_emosol, @diegoperini, and the Spoon Library, tried in that order to catch."""
     return RE_IS_URL_P1.match(url) is not None  # for now, until I convert P2-4 to Python regex, just this
     if RE_IS_URL_P1.match(url) is not None:  # handles all positive cases and most negative edge cases
@@ -276,80 +291,79 @@ class PYTDL(Cmd):  # noqa: PLR0904
     #   return False
     # return RE_IS_URL_P4.match(url) is not None # so now any that don't pass are REALLY probably not URLs, etc, last due to being much slower (big regex)
 
-  def url_info(self, url: str) -> dict[str, dict[str, Any]]:
+  def url_info(self: Self, url: str) -> dict[str, dict[str, Any] | Any]:
     """Get the infodict for a URL."""
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
 
     with YoutubeDL({"simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}) as ydl:
       info = ydl.extract_info(url, download=False)
-    info = self.filter_info(info)  # type: ignore
+    info = self.filter_info(info)  # type: ignore[reportArgumentType]
     self.info_cache[url] = info
     return info
 
-  def is_supported(self, url: str) -> bool:
+  def is_supported(self: Self, url: str) -> bool:
     """Check if the URL is supported."""
-    # TODO: speedup, url_info is way too slow rn, probably better to cache a
+    # TODO(alex): speedup, url_info is way too slow rn, probably better to cache a
     # domain to disk so we can just say "it's on this site, so it's probably
     # viable", perhaps as part of history, just as a quick check? or I do a
     # better system where when we process them, if we find it's now no-longer
     # supported (since this assumes it remains) then we kick that URL to a
     # different track to handle it
-    try:
-      self.url_info(url)
-    except Exception:
+    info = None
+    with suppress(Exception):
+      info = self.url_info(url)
+    if info is None:
       if not self.is_quiet:
         print(url, "is not supported")
       return False
     return True
 
-  def is_show(self, url: str) -> bool:
+  def is_show(self: Self, url: str) -> bool:
     """Is a URL for a show? If so, it'll have a different folder structure."""
     # info = self.url_info(url)
     return self.is_crunchyroll(url)
 
-  def is_playlist(self, url: str) -> bool:
+  def is_playlist(self: Self, url: str) -> bool:
     """Is a URL actually a playlist? If so, it'll be downloaded differently."""
     info = self.url_info(url)
     return ("playlist" in url or "youtube.com/c/" in url) or (
       info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
     )
 
-  def is_live(self, url: str) -> bool:
+  def is_live(self: Self, url: str) -> bool:
     """Is a video currently live? If so, we may need to wait until it's not."""
-    try:
+    with suppress(Exception):
       info = self.url_info(url)
       if "is_live" in info:
-        return info["is_live"]  # type: ignore
-    except Exception:
-      pass
+        return info["is_live"]  # type: ignore[reportReturnType]
     return False
 
-  def is_podcast(self, url: str) -> bool:  # noqa: PLR6301
+  def is_podcast(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL a podcast?"""
     return "podcast" in url
 
-  def is_twitch(self, url: str) -> bool:  # noqa: PLR6301
+  def is_twitch(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for twitch.tv?"""
     return "twitch.tv" in url
 
-  def is_twitter(self, url: str) -> bool:  # noqa: PLR6301
+  def is_twitter(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for twitter.com?"""
     return "twitter.com" in url
 
-  def is_crunchyroll(self, url: str) -> bool:  # noqa: PLR6301
+  def is_crunchyroll(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for Crunchyroll?"""
     return "crunchyroll" in url
 
-  def is_tenor(self, url: str) -> bool:  # noqa: PLR6301
+  def is_tenor(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for Tenor?"""
     return "tenor.com" in url
 
-  def is_instagram(self, url: str) -> bool:  # noqa: PLR6301
+  def is_instagram(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for Instagram."""
     return "instagram.com" in url
 
-  def is_youtube(self, url: str) -> bool:  # noqa: PLR6301
+  def is_youtube(self: Self, url: str) -> bool:  # noqa: PLR6301
     """Is a URL for Youtube?"""
     return "youtube.com/" in url or "youtu.be/" in url
 
@@ -357,35 +371,35 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # I/O #
   #######
 
-  def ensure_dir(self, url: str | Path):
+  def ensure_dir(self: Self, url: str | Path) -> None:
     """Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."""
     # Path(self.config(url, take_input = False)["outtmpl"]["default"]).expanduser().parent.mkdir(parents = True, exist_ok = True) # can't use bc. tmpl'd parents
     for parent in [
       parent
-      for parent in Path(self.config(url, take_input=False)["outtmpl"]["default"]).expanduser().parents  # type: ignore
+      for parent in Path(self.config(url, take_input=False)["outtmpl"]["default"]).expanduser().parents  # type: ignore[reportArgumentType]
       if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
     ][::-1]:
       parent.mkdir()
 
-  def readfile(self, path: str | Path) -> list[str]:
+  def readfile(self: Self, path: str | Path) -> list[str]:
     """Reads lines from a file."""
     if (f := Path(path).expanduser()).is_file():
       return unique_list(map(self.clean_url, filter(None, map(str.strip, f.read_text(encoding="utf8").splitlines()))))
     return []
 
-  def writefile(self, path: str | Path, lines: list):
+  def writefile(self: Self, path: str | Path, lines: list) -> None:
     """Writes lines to a file."""
     f = Path(path).expanduser()
     f.write_text("\n".join(unique_list(map(self.clean_url, filter(None, lines)))), encoding="utf8", newline="\n")
 
-  def update_history(self):
+  def update_history(self: Self) -> None:
     """Update the history file."""
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
 
-  def clean_url(self, url: str):  # noqa: PLR6301
+  def clean_url(self: Self, url: str):  # noqa: PLR6301
     if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
-      # TODO: better system than this, actually semantically extract & discard
+      # TODO(alex): better system than this, actually semantically extract & discard
       # for example, to deal with youtu.be/ExampleVid?si=creepytracking
       # so we just pull out "oh, this is the vid" and discard the rest, really
       # our current approach is just a "if we defluff and it stays valid, do so"
@@ -410,7 +424,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
         url = url.replace("imgur.artemislena.eu/", "i.imgur.com/", 1)
     return url
 
-  def download(self, raw_url: str):
+  def download(self: Self, raw_url: str) -> None:
     """Actually download something."""
     url = self.clean_url(raw_url)
     with YoutubeDL(self.config(url)) as ydl:
@@ -419,7 +433,9 @@ class PYTDL(Cmd):  # noqa: PLR0904
         r = ydl.download(url)
       except KeyboardInterrupt:
         raise
-      except Exception as err:
+      except SystemExit:
+        raise
+      except Exception as err:  # noqa: BLE001
         print(err)
         r = 1
     if r:
@@ -432,10 +448,10 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # User Settings #
   #################
 
-  def do_mode(self, arg=""):
+  def do_mode(self: Self, _arg: str = "") -> None:
     """Prints details about the mode of operation and system."""
 
-    def yesify(b):
+    def yesify(b: bool) -> Literal["Yes", "No"]:  # noqa: FBT001
       return "Yes" if b else "No"
 
     print("Mode:", "Idle" if self.is_idle else "Interactive")
@@ -447,12 +463,12 @@ class PYTDL(Cmd):  # noqa: PLR0904
     print("Sleep interval:", self.naptime, "seconds")
     print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
 
-  def do_config(self, arg: str | Path = ""):
+  def do_config(self: Self, arg: str | Path = "") -> None:  # noqa: C901
     """Load a TOML configuration on a given path, default to config_file: config | config [path]."""
     arg = Path(arg).expanduser()
     config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
 
-    assert self.__annotations__ == self.__class__.__annotations__  # no shennanigans... for now
+    assert self.__annotations__ == self.__class__.__annotations__  # no shennanigans... for now  # noqa: S101
     for key, t in self.__annotations__.items():  # initialise annotated types
       if key not in self.__dict__ and key not in self.__class__.__dict__:
         if callable(t):
@@ -461,7 +477,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
           logging.exception(f"An unusable type {t} was annotated as a field in {type(self)} and could not be initialised")
           raise TypeError(key, t)
 
-    def __rec(old: dict, new: dict, path: list[str]):
+    def __rec(old: dict, new: dict, path: list[str]) -> None:
       """Recursively update a dictionary according to the implicit schema of its existing keys/structure and types."""
       for k, v in new.items():
         pth = [*path, k]
@@ -486,37 +502,37 @@ class PYTDL(Cmd):  # noqa: PLR0904
 
     logging.config.dictConfig(self.log_config)
 
-  def do_audio(self, arg=""):
+  def do_audio(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL treat urls as only audio by default."""
     self.is_audio = not self.is_audio
     print("Audio!" if self.is_audio else "Not audio...")
 
-  def do_captions(self, arg=""):
+  def do_captions(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL treat urls as only captions by default."""
     self.is_captions = not self.is_captions
     print("Captions!" if self.is_captions else "Not captions...")
 
-  def do_quiet(self, arg=""):
+  def do_quiet(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL is quiet or not."""
     self.is_quiet = not self.is_quiet
     print("Shh" if self.is_quiet else "BOO!")
 
-  def do_dated(self, arg=""):
+  def do_dated(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL dates videos by default."""
     self.is_dated = not self.is_dated
     print("Dating now" if self.is_dated else "Dateless...")
 
-  def do_forced(self, arg=""):
+  def do_forced(self: Self, _arg: str = "") -> None:
     """Toggle whether to force redownloads of videos."""
     self.is_forced = not self.is_forced
     print("Force downloads" if self.is_forced else "Doesn't force downloads")
 
-  def do_idle(self, arg=""):
+  def do_idle(self: Self, _arg: str = "") -> None:
     """Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."""
     self.is_idle = not self.is_idle
     print("Idling" if self.is_idle else "Interactive")
 
-  def do_naptime(self, arg: str):
+  def do_naptime(self: Self, arg: str) -> None:
     """How long do we sleep between downloads (on average)?"""
     if arg.isdecimal():
       self.naptime = int(arg)
@@ -524,7 +540,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       self.naptime = 0
     print(f"We sleep for {self.naptime}s on average.")
 
-  def do_res(self, arg: str):
+  def do_res(self: Self, arg: str) -> None:
     """Provide a maximum resolution to download to, or nothing to remove the limit: res | res 1080."""
     if arg.isdecimal():
       self.maxres = int(arg)
@@ -536,14 +552,14 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # User Commands #
   #################
 
-  def from_index(self, i: str) -> str | None:
+  def from_index(self: Self, i: str) -> str | None:
     """Gets the i'th URL in the queue."""
     queue = list(self.queue)
     if i.isdecimal() or (len(i) > 1 and i[0] == "-" and i[1:].isdecimal()):
       return queue[int(i)]
     return None
 
-  def do_print(self, arg: str):
+  def do_print(self: Self, arg: str) -> None:
     """Print the queue, or certain URLs in it: print | print 0 | @ 0 | @ 1 2 5 | @ -1."""
     print(f"There are {len(self.queue)} URLs in the queue")
     if len(self.queue):
@@ -556,7 +572,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
         for url in self.queue:
           print(url)
 
-  def do_info(self, arg: str):
+  def do_info(self: Self, arg: str) -> None:
     """Print useful info for given URLs: info [url] [...] | info 0 5 -2 [url] [...]."""
     for url_ in arg.split():
       try:
@@ -569,17 +585,17 @@ class PYTDL(Cmd):  # noqa: PLR0904
       except KeyError as err:  # noqa: PERF203
         print(err)
       except Exception as err:
-        print(info)  # type: ignore
+        print(info)
         print(err)
         raise
 
-  def do_infodump(self, urls: str):
+  def do_infodump(self: Self, urls: str) -> None:
     """Dumps all info of given URLs to JSON files in CWD: dump [url] [...]."""
     for url in urls.split():
       info = self.url_info(url)
       Path(f"{info["id"]}.json").write_text(json.dumps(info))
 
-  def do_echo(self, arg: str):
+  def do_echo(self: Self, arg: str) -> None:
     """Echoes all URLs as it would try to download them (cleaned up and with potential fixes for common typos etc)."""
     if len(arg) and len(q := arg.split()):
       for p in q:
@@ -588,7 +604,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
         else:
           print(p)
 
-  def do_add(self, arg: str, /, check_supported=False):
+  def do_add(self: Self, arg: str, *, check_supported: bool = False) -> None:
     """Add a url to the list (space separated for multiple): add [url] | [url] | [url] [url] [url] | add front [url] [url] [url]."""
     temp = None
     if len(arg):
@@ -597,7 +613,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
         temp = dict(self.queue)
         self.queue = {}
       for url in arg.split():
-        # TODO: valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
+        # TODO(alex): valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
         if len(url) > 4 and (not check_supported or self.is_supported(url)):
           self.queue[url] = url
     if temp:
@@ -605,7 +621,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
     for url in self.queue:
       self.deleted.discard(url)  # If we add it back, it should stay, unless we delete again, etc.
 
-  def do_del(self, arg: str):
+  def do_del(self: Self, arg: str) -> None:
     """Delete a url from the queue and/or history: del [url] | - [url]."""
     for url in arg.split():
       if len(url) and url in self.queue and yesno(f"Do you want to remove {url} from the queue?"):
@@ -618,7 +634,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
         if url in self.info_cache:
           del self.info_cache[url]
 
-  def do_drop(self, arg: str | Path):
+  def do_drop(self: Self, arg: str | Path) -> None:
     """Drop the queue: drop | drop [queue file]."""
     if isinstance(arg, str) and len(arg) == 0:
       arg = self.queue_file
@@ -631,7 +647,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       self.writefile(arg, [])
     self.do_forget()
 
-  def do_forget(self, arg: str | Path = ""):
+  def do_forget(self: Self, arg: str | Path = "") -> None:
     """Forget all current known history: forget | forget [history file]."""
     if isinstance(arg, str) and len(arg) == 0:
       arg = self.history_file
@@ -641,7 +657,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
     if yesno("Do you want to forget the history file?") and yesno("Are you sure about this?"):
       self.writefile(arg, [])
 
-  def do_get(self, arg: str | list[str]):
+  def do_get(self: Self, arg: str | list[str]) -> None:
     """Get the video from given URLs: get [url] [...] | ! [url] [...]."""
     still_live, urls = [], arg.split() if isinstance(arg, str) else arg
     if len(urls):
@@ -671,14 +687,14 @@ class PYTDL(Cmd):  # noqa: PLR0904
     if len(still_live):
       self.do_wait(" ".join(still_live))
 
-  def do_getall(self, arg: str = ""):
+  def do_getall(self: Self, arg: str = "") -> None:
     """Get the videos in the queue, including any from a given file: getall [file] | . [file]."""
     set_title("organising queue")
     if len(arg) or len(self.queue) == 0:
       self.do_load(arg)
     self.do_get(list(self.queue))
 
-  def do_load(self, arg: str = "", /, check_supported=True):
+  def do_load(self: Self, arg: str = "", *, check_supported: bool = True) -> None:
     """Load the contents of a file into the queue (add a - to not load the history): load [file] | load- [file] | : [file] | :- [file]."""
     path, pre, get_history = arg, len(self.queue), True
     if path.startswith("-"):
@@ -694,7 +710,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
       self.update_history()
     set_title(f"loaded {len(self.queue)} videos {f", {len(self.queue) - pre} new" if pre else ""}")
 
-  def do_save(self, arg: str = ""):
+  def do_save(self: Self, arg: str = "") -> None:
     """Save the queue to a file (defaults to queue_file, add a - to not save the history): save [file] | save- [file] | # [file] | #- [file]."""
     set_title("saving")
     path, queue, set_history = arg, dict(self.queue), True
@@ -709,7 +725,7 @@ class PYTDL(Cmd):  # noqa: PLR0904
     if set_history:
       self.update_history()
 
-  def do_wait(self, arg: str = ""):
+  def do_wait(self: Self, arg: str = "") -> None:
     """Wait on currently live videos, checking in slowing intervals from 10s to 10mins: wait | wait [url] [...]."""
     urls, i = arg.split(), 0
     if len(arg) == 0 or len(urls) == 0:
@@ -736,13 +752,14 @@ class PYTDL(Cmd):  # noqa: PLR0904
         self.do_get(url)
         elapsed, i = 0, 0  # reset since we just spent a chunk of time downloading
 
-  def do_merge(self, arg: str = ""):  # noqa: PLR6301
+  def do_merge(self: Self, arg: str = "") -> None:  # noqa: PLR6301
     """Merge subtitles within a given directory, recursively. Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the path."""
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
     merge_subs(path)
 
-  def do_clean(self, arg: str = ""):  # noqa: PLR6301
+  def do_clean(self: Self, arg: str = "") -> None:  # noqa: PLR6301
     """Cleans leading '0 ', trailing ' - ' and '.', and '  ' from file names, such as for single-season shows or those with missing fields.
+
     Defaults to searching '~/Videos/Shows/', otherwise provide an argument for the folder: clean | clean [path-to-directory].
     """
     path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
@@ -754,20 +771,20 @@ class PYTDL(Cmd):  # noqa: PLR0904
           new_stem = new_stem.replace("  ", " ")
         vid.rename(vid.with_stem(new_stem))
 
-  def do_clear(self, arg=None):  # noqa: PLR6301
+  def do_clear(self: Self, _arg: str = "") -> None:  # noqa: PLR6301
     """Clear the screen."""
     if platform.system() == "Windows":
-      term("cls")
+      term("cls")  # noqa: S607, S605
     else:
-      term("clear")
+      term("clear")  # noqa: S605, S607
 
-  def do_exit(self, arg=""):
+  def do_exit(self: Self, _arg: str = "") -> Literal[True]:
     """Exit PYTDL."""
     logging.debug("Exitting sequence started")
-    self.do_save(arg)
-    set_title("exitting")
-    arg = Path(arg).expanduser()
+    arg = Path(_arg).expanduser()
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
+    self.do_save(_arg)
+    set_title("exitting")
     logging.debug(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
     sleep(2.0)
@@ -778,11 +795,11 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # Cmd Handlers #
   ################
 
-  def postcmd(self, stop, line):
+  def postcmd(self: Self, stop, _line) -> bool:  # noqa: ANN001
     set_title(f"{len(self.queue)} queued videos" if len(self.queue) else "")
     return stop
 
-  def preloop(self):
+  def preloop(self: Self) -> None:
     set_title("starting up")
     self.do_config()
     self.do_config()  # in case of redirection
@@ -794,25 +811,26 @@ class PYTDL(Cmd):  # noqa: PLR0904
   # Shorthand Operators #
   #######################
 
-  def default(self, arg: str):
+  def default(self: Self, arg: str) -> None:
     op, arg = arg[0], arg[1:].strip()
-    # TODO: come up with a general operator system? multi-char + multi-op + infix
-    if op == ".":
-      self.do_getall(arg)
-    elif op == "!":
-      self.do_get(arg)
-    elif op == "-":
-      self.do_del(arg)
-    elif op == ":":
-      self.do_load(arg)
-    elif op == "#":
-      self.do_save(arg)
-    elif op == "*":
-      self.update_history()
-    elif op == "@":
-      self.do_print(arg)
-    else:
-      self.do_add(f"{op}{arg}")
+    # TODO(alex): come up with a general operator system? multi-char + multi-op + infix
+    match op:
+      case ".":
+        self.do_getall(arg)
+      case "!":
+        self.do_get(arg)
+      case "-":
+        self.do_del(arg)
+      case ":":
+        self.do_load(arg)
+      case "#":
+        self.do_save(arg)
+      case "*":
+        self.update_history()
+      case "@":
+        self.do_print(arg)
+      case _:
+        self.do_add(f"{op}{arg}")
 
 
 if __name__ == "__main__":
