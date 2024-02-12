@@ -85,12 +85,12 @@ RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
 RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")  # base64.urlsafe_b64decode(urllib.parse.unquote(Match(RE_YT_FLUFF_PP).group(0)))[3:] is the used search term
 
 
-def filter_maker(level_name: str) -> Callable[..., bool]:
+def filter_maker(level: str) -> Callable[..., bool]:
   """Create a filter to remove all below, say, "WARNING"."""
-  level: int = getattr(logging, level_name)
+  level_int: int = getattr(logging, level)
 
   def fltr(record: logging.LogRecord) -> bool:
-    return record.levelno <= level
+    return record.levelno <= level_int
 
   return fltr
 
