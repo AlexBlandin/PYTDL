@@ -11,7 +11,7 @@ def nodot(s):
 
 
 def merge_subs(path=Path()):
-  "A handy utility to merge .ass subtitles into .mp4 videos non-destructively (by switching to .mkv)"
+  """A handy utility to merge .ass subtitles into .mp4 videos non-destructively (by switching to .mkv)."""
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(Path.is_file, path.rglob("*.ass")))
   _pair: dict[Path, Path | None] = {vid: None for vid in vids}

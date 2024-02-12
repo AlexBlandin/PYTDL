@@ -15,8 +15,7 @@ mutagen = "^1.45.1"
 beautifulsoup4 = "^4.11.1"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.6"
-pylint = "^3.0.2"
+ruff = "^0.2.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -30,8 +29,11 @@ line-length = 160
 preview = true
 
 [tool.ruff.lint]
-select = ["F", "E", "W", "N", "UP", "B", "SIM", "PD", "PL", "TRY", "FLY", "NPY", "PERF", "FURB", "RUF"]
-ignore = ["N803", "N806", "E111", "E114", "Q", "W293", "E261", "PLR2004", "PLR0912"]
+select = ["ALL"]
+ignore = ["CPY", "TD003", "S311", "T201", "W191", "E111", "E114", "E117", "E203", "D206", "D300", "Q000", "Q001", "Q002", "Q003", "COM812", "COM819", "ISC001", "ISC002"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.isort]
 ensure_newline_before_comments = true
