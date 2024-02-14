@@ -23,17 +23,22 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 indent-width = 2
-format.line-ending = "lf"
 target-version = "py310"
 line-length = 160
 preview = true
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["ERA001", "G004", "CPY", "TD003", "S311", "T201", "ANN401", "PLR2004", "W191", "E111", "E114", "E117", "E203", "D206", "D300", "Q000", "Q001", "Q002", "Q003", "COM812", "COM819", "ISC001", "ISC002"]
+ignore = ["ERA001", "G004", "CPY", "TD003", "S311", "T201", "ANN401", "PLR2004", "W191", "E111", "E114", "E117", "E203", "D206", "D212", "D300", "Q000", "Q001", "Q002", "Q003", "COM812", "COM819", "ISC001", "ISC002"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+line-ending = "lf"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 [tool.isort]
 ensure_newline_before_comments = true

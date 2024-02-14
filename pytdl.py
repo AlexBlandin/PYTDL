@@ -1,4 +1,5 @@
-"""Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
+"""
+Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
 
 Requirements:
 - ffmpeg
