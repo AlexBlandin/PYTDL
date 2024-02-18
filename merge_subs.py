@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Hazel says hi.
+
+Copyright 2019 Alex Blandin
+"""
+
+from contextlib import suppress
 from pathlib import Path
 from pprint import pprint
 from subprocess import run
@@ -6,11 +13,11 @@ from subprocess import run
 import langcodes  # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
 
 
-def nodot(s):
+def nodot(s):  # noqa: ANN001, ANN201, D103
   return s.removeprefix(".")
 
 
-def merge_subs(path=Path()):
+def merge_subs(path=Path()) -> None:  # noqa: ANN001
   """A handy utility to merge .ass subtitles into .mp4 videos non-destructively (by switching to .mkv)."""
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(Path.is_file, path.rglob("*.ass")))
@@ -31,7 +38,7 @@ def merge_subs(path=Path()):
     for _ in range(2):  # how many tries
       if (
         r := run(
-          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" ',  # noqa: E501
+          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" ',  # noqa: E501, S603
           check=False,
         )
       ).returncode:
@@ -41,11 +48,10 @@ def merge_subs(path=Path()):
     else:
       continue  # couldn't merge
     if vid.with_suffix(".mkv").is_file():
-      try:
+      with suppress(Exception):
         vid.unlink()
         sub.unlink()
-      except Exception:  # we fail to unlink if, say, someone is already watching it!
-        pass
+      # we fail to unlink if, say, someone is already watching it!
 
 
 if __name__ == "__main__":
