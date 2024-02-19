@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Hazel says hi.
+merge subs.
 
 Copyright 2019 Alex Blandin
 """
