@@ -3,6 +3,7 @@ name = "Python Youtube Downloader"
 version = "2.0.0"
 description = "An interactive command-line tool to batch download with yt-dlp"
 authors = ["AlexBlandin"]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.10"
