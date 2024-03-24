@@ -125,6 +125,8 @@ class PYTDL(Cmd):
   "URL info we can save between uses"
   local = Path(__file__).parent
   "The local path is where PYTDL is installed"
+  home = Path.home()
+  "Where the user's home directory is"
   cookies = local / "cookies"
   "Where we keep cookies for yt-dlp to use"
 
@@ -208,48 +210,41 @@ class PYTDL(Cmd):
       "writesubtitles": True,
     },
     "dated": {  # TODO(alex): do a better way of setting this so it can be included in any...
-      "outtmpl": {"default": str(Path.home() / "Videos" / f"{fmt_date_only} {fmt_title} [%(id)s].%(ext)s")},
+      "outtmpl": str(home / "Videos" / f"{fmt_date_only} {fmt_title} [%(id)s].%(ext)s"),
     },
     "show": {
-      "outtmpl": {
-        "default": str(
-          Path.home()
-          / "Videos"
-          / "Shows"
-          / "%(series)s"
-          / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
-        ),
-      },
+      "outtmpl": str(
+        home
+        / "Videos"
+        / "Shows"
+        / "%(series)s"
+        / "%(season_number|)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+      )
     },
     "playlist": {
-      "outtmpl": {
-        "default": str(
-          Path.home()
-          / "Videos"
-          / "%(playlist_title)s"
-          / f"%(playlist_autonumber,playlist_index|)03d {fmt_title}.%(ext)s"
-        )
-      }
+      "outtmpl": str(
+        home / "Videos" / "%(playlist_title)s" / f"%(playlist_autonumber,playlist_index|)03d {fmt_title}.%(ext)s"
+      )
     },
     "podcast": {
-      "outtmpl": {
-        "default": str(Path.home() / "Videos" / "Podcasts" / f"{fmt_title} %(webpage_url_basename)s [%(id)s].%(ext)s")
-      }
+      "outtmpl": str(home / "Videos" / "Podcasts" / f"{fmt_title} %(webpage_url_basename)s [%(id)s].%(ext)s")
     },
     "twitter": {
       "username": secrets["twitter"]["username"],
       "password": secrets["twitter"]["password"],
+      "cookiefile": str(cookies / "twitter.txt"),
+      "outtmpl": str(
+        home / "Videos" / f"%(uploader_id,uploader|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s"
+      ),
       # switch around so it used uploader_id,uploader bc display names are funky
     },
     "twitch": {
       # "wait_for_video": (3,10) # TODO(alex): how does this one work? should I use it?
       # "live_from_start": True # TODO(alex): is this how I want it to handle it?
       "fixup": "never",
-      "outtmpl": {
-        "default": str(
-          Path.home() / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s"
-        )
-      },
+      "outtmpl": str(
+        home / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s"
+      ),
     },
     "youtube": {},  # {"embed_chapters": True, "embed_thumbnail": True},
     "crunchyroll": {  # doesn't work currently as there's no way to pass user-agent
@@ -259,22 +254,18 @@ class PYTDL(Cmd):
       "password": secrets["crunchyroll"]["password"],
       # "cookiefile": str(cookies / "crunchy.txt"),
       # "user-agent": str(cookies / "useragent.txt"),
-      "outtmpl": {
-        "default": str(
-          Path.home()
-          / "Videos"
-          / "Shows"
-          / "%(series)s"
-          / "%(season_number|0)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
-        ),
-      },
+      "outtmpl": str(
+        home
+        / "Videos"
+        / "Shows"
+        / "%(series)s"
+        / "%(season_number|0)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
+      ),
     },
     "default": {
-      "outtmpl": {
-        "default": str(
-          Path.home() / "Videos" / f"%(uploader,uploader_id|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s"
-        )
-      },
+      "outtmpl": str(
+        home / "Videos" / f"%(uploader,uploader_id|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s"
+      ),
       # "rm_cache_dir": True,
       "merge_output_format": "mkv",
       "overwrites": False,
@@ -298,34 +289,42 @@ class PYTDL(Cmd):
   # Format/Template Selection #
   #############################
 
-  def config(self: Self, url: str, *, take_input: bool = True) -> ChainMap[str, bool | str]:
+  def config(  # noqa: C901, PLR0912
+    self: Self, url: str, *, take_input: bool = True, actually_download: bool = True
+  ) -> ChainMap[str, str | bool]:
     """Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)."""
-    return ChainMap(
-      {"quiet": self.is_quiet},
-      self.template["audio"] if self.is_audio else self.template["captions"] if self.is_captions else {},
-      {"playlistreverse": yesno("Should we reverse the ordering playlist order?", accept_return=False)}
-      if take_input and self.is_playlist(url)
-      else {},
-      {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"} if self.maxres else {},
-      self.template["playlist"]
-      if self.is_playlist(url)
-      else self.template["show"]
-      if self.is_show(url)
-      else self.template["crunchyroll"]
-      if self.is_crunchyroll(url)
-      else self.template["twitter"]
-      if self.is_twitter(url)
-      else self.template["twitch"]
-      if self.is_twitch(url)
-      else self.template["podcast"]
-      if self.is_podcast(url)
-      else self.template["dated"]
-      if self.is_dated
-      else self.template["youtube"]
-      if self.is_youtube(url)
-      else {},
-      self.template["default"],
-    )
+    maps: dict[str, dict[str, str | bool]] = {"quiet": {"quiet": self.is_quiet}}
+    if self.is_audio:
+      maps["audio"] = self.template["audio"]
+    if self.is_captions:
+      maps["captions"] = self.template["captions"]
+    if self.maxres:
+      maps["maxres"] = {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"}
+    if self.is_show(url):
+      maps["show"] = self.template["show"]
+    if self.is_crunchyroll(url):
+      maps["crunchyroll"] = self.template["crunchyroll"]
+    if self.is_twitter(url):
+      maps["twitter"] = self.template["twitter"]
+    if self.is_twitch(url):
+      maps["twitch"] = self.template["twitch"]
+    if self.is_podcast(url):
+      maps["podcast"] = self.template["podcast"]
+    if self.is_dated:
+      maps["dated"] = self.template["dated"]
+    if self.is_youtube(url):
+      maps["youtube"] = self.template["youtube"]
+    maps["default"] = self.template["default"]
+
+    if actually_download:
+      if take_input and self.is_playlist(url):
+        maps["playlistreverse"] = {
+          "playlistreverse": yesno("Should we reverse the ordering playlist order?", accept_return=False)
+        }
+      if self.is_playlist(url):
+        maps["playlist"] = self.template["playlist"]
+
+    return ChainMap(*maps.values())
 
   #########################
   # URL/Video Information #
@@ -351,7 +350,9 @@ class PYTDL(Cmd):
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
 
-    with YoutubeDL({"simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}) as ydl:
+    with YoutubeDL(
+      {**self.config(url), "simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}
+    ) as ydl:
       info = ydl.extract_info(url, download=False)
     info = self.filter_info(info)  # type: ignore[reportArgumentType]
     self.info_cache[url] = info
@@ -381,10 +382,14 @@ class PYTDL(Cmd):
 
   def is_playlist(self: Self, url: str) -> bool:
     """Is a URL actually a playlist? If so, it'll be downloaded differently."""
-    info = self.url_info(url)
-    return ("playlist" in url or "youtube.com/c/" in url) or (
-      info.get("playlist") is not None or info.get("playlist_title") is not None or info.get("playlist_id") is not None
-    )
+    with suppress(Exception):
+      info = self.url_info(url)
+      return ("playlist" in url or "youtube.com/c/" in url) or (
+        info.get("playlist") is not None
+        or info.get("playlist_title") is not None
+        or info.get("playlist_id") is not None
+      )
+    return False
 
   def is_live(self: Self, url: str) -> bool:
     """Is a video currently live? If so, we may need to wait until it's not."""
@@ -428,12 +433,12 @@ class PYTDL(Cmd):
 
   def ensure_dir(self: Self, url: str | Path) -> None:
     """Ensure we can place a URL's resultant file in its expected directory, recursively (ignoring templates)."""
-    # Path(self.config(url, take_input=False)["outtmpl"]["default"]).expanduser().parent.mkdir(
+    # Path(self.config(url, take_input=False)["outtmpl"]).expanduser().parent.mkdir(
     #   parents=True, exist_ok=True
     # )  # can't use bc. template's parents
     for parent in [
       parent
-      for parent in Path(self.config(url, take_input=False)["outtmpl"]["default"]).expanduser().parents  # type: ignore[reportArgumentType]
+      for parent in Path(self.config(url, take_input=False)["outtmpl"]).expanduser().parents  # type: ignore[reportArgumentType]
       if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
     ][::-1]:
       parent.mkdir()
@@ -484,7 +489,7 @@ class PYTDL(Cmd):
   def download(self: Self, raw_url: str) -> None:
     """Actually download something."""
     url = self.clean_url(raw_url)
-    with YoutubeDL(self.config(url)) as ydl:
+    with YoutubeDL(self.config(url, actually_download=True)) as ydl:
       self.ensure_dir(url)
       try:
         r = ydl.download(url)
@@ -863,7 +868,7 @@ class PYTDL(Cmd):
 
     >>> merge | merge [path-to-directory]
     """
-    path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
+    path = Path(arg).expanduser() if len(arg) else self.home / "Videos" / "Shows"
     merge_subs(path)
 
   def do_clean(self: Self, arg: str = "") -> None:
@@ -874,7 +879,7 @@ class PYTDL(Cmd):
 
     >>> clean | clean [path-to-directory].
     """
-    path = Path(arg).expanduser() if len(arg) else Path.home() / "Videos" / "Shows"
+    path = Path(arg).expanduser() if len(arg) else self.home / "Videos" / "Shows"
     vids = list(filter(Path.is_file, path.rglob("*")))
     for vid in vids:
       if vid.name.startswith("0 "):
