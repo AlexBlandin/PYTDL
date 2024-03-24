@@ -289,42 +289,47 @@ class PYTDL(Cmd):
   # Format/Template Selection #
   #############################
 
-  def config(  # noqa: C901, PLR0912
-    self: Self, url: str, *, take_input: bool = True, actually_download: bool = True
-  ) -> ChainMap[str, str | bool]:
-    """Config for a given url: playlist, crunchyroll, twitch.tv, or youtube (default)."""
-    maps: dict[str, dict[str, str | bool]] = {"quiet": {"quiet": self.is_quiet}}
-    if self.is_audio:
-      maps["audio"] = self.template["audio"]
-    if self.is_captions:
-      maps["captions"] = self.template["captions"]
-    if self.maxres:
-      maps["maxres"] = {"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"}
-    if self.is_show(url):
-      maps["show"] = self.template["show"]
+  def site_params(self: Self, url: str) -> dict[str, str | bool] | None:
+    """Specific parameters for known sites, including credentials."""
     if self.is_crunchyroll(url):
-      maps["crunchyroll"] = self.template["crunchyroll"]
+      return self.template["crunchyroll"]
     if self.is_twitter(url):
-      maps["twitter"] = self.template["twitter"]
+      return self.template["twitter"]
     if self.is_twitch(url):
-      maps["twitch"] = self.template["twitch"]
-    if self.is_podcast(url):
-      maps["podcast"] = self.template["podcast"]
-    if self.is_dated:
-      maps["dated"] = self.template["dated"]
+      return self.template["twitch"]
     if self.is_youtube(url):
-      maps["youtube"] = self.template["youtube"]
-    maps["default"] = self.template["default"]
+      return self.template["youtube"]
+    return None
 
-    if actually_download:
-      if take_input and self.is_playlist(url):
-        maps["playlistreverse"] = {
-          "playlistreverse": yesno("Should we reverse the ordering playlist order?", accept_return=False)
-        }
-      if self.is_playlist(url):
-        maps["playlist"] = self.template["playlist"]
+  def params(self: Self, url: str, *, take_input: bool = True) -> ChainMap[str, str | bool]:
+    """YT-DLP parameters for a given url according to our current config."""
+    maps: list[dict[str, str | bool]] = [{"quiet": self.is_quiet}]
 
-    return ChainMap(*maps.values())
+    if (site_param := self.site_params(url)) is not None:
+      maps.append(site_param)
+
+    # Category specific params (shows, podcasts, playlists, etc.)
+    if self.is_show(url):
+      maps.append(self.template["show"])
+    if self.is_podcast(url):
+      maps.append(self.template["podcast"])
+    if self.is_playlist(url):
+      if take_input:
+        maps.append({"playlistreverse": yesno("Should we reverse the ordering playlist order?", accept_return=False)})
+      maps.append(self.template["playlist"])
+
+    # Params according to settings (audio only, captions, etc.)
+    if self.is_audio:
+      maps.append(self.template["audio"])
+    if self.is_captions:
+      maps.append(self.template["captions"])
+    if self.maxres:
+      maps.append({"format": f"bv*[height<={self.maxres}]+ba/b[height<={self.maxres}]/bv*+ba/b"})
+    if self.is_dated:
+      maps.append(self.template["dated"])
+    maps.append(self.template["default"])
+
+    return ChainMap(*maps)
 
   #########################
   # URL/Video Information #
@@ -351,7 +356,13 @@ class PYTDL(Cmd):
       return self.info_cache[url]
 
     with YoutubeDL(
-      {**self.config(url), "simulate": True, "quiet": True, "no_warnings": True, "consoletitle": True}
+      params={
+        **(self.site_params(url) or self.template["default"]),
+        "simulate": True,
+        "quiet": True,
+        "no_warnings": True,
+        "consoletitle": True,
+      }
     ) as ydl:
       info = ydl.extract_info(url, download=False)
     info = self.filter_info(info)  # type: ignore[reportArgumentType]
@@ -415,14 +426,6 @@ class PYTDL(Cmd):
     """Is a URL for Crunchyroll?"""
     return "crunchyroll" in url
 
-  def is_tenor(self: Self, url: str) -> bool:
-    """Is a URL for Tenor?"""
-    return "tenor.com" in url
-
-  def is_instagram(self: Self, url: str) -> bool:
-    """Is a URL for Instagram."""
-    return "instagram.com" in url
-
   def is_youtube(self: Self, url: str) -> bool:
     """Is a URL for Youtube?"""
     return "youtube.com/" in url or "youtu.be/" in url
@@ -438,7 +441,7 @@ class PYTDL(Cmd):
     # )  # can't use bc. template's parents
     for parent in [
       parent
-      for parent in Path(self.config(url, take_input=False)["outtmpl"]).expanduser().parents  # type: ignore[reportArgumentType]
+      for parent in Path(self.params(url, take_input=False)["outtmpl"]).expanduser().parents  # type: ignore[reportArgumentType]
       if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
     ][::-1]:
       parent.mkdir()
@@ -489,7 +492,7 @@ class PYTDL(Cmd):
   def download(self: Self, raw_url: str) -> None:
     """Actually download something."""
     url = self.clean_url(raw_url)
-    with YoutubeDL(self.config(url, actually_download=True)) as ydl:
+    with YoutubeDL(self.params(url)) as ydl:
       self.ensure_dir(url)
       try:
         r = ydl.download(url)
@@ -644,7 +647,6 @@ class PYTDL(Cmd):
         info = self.url_info(url)
         print(f"URL: {url}")
         print(f"Title: {info["fulltitle"]}")
-        print("Twitch.tv" if self.is_twitch(url) else "Crunchyroll" if self.is_crunchyroll(url) else "Default")
         print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
       except KeyError as err:  # noqa: PERF203
         print(err)
