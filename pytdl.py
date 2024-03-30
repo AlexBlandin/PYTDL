@@ -203,6 +203,26 @@ class PYTDL(Cmd):
   "The configuration for logging, such that we can provide a log file and terminal output."
 
   template = {  # noqa: RUF012
+    "default": {
+      "outtmpl": str(
+        home / "Videos" / f"%(uploader,uploader_id|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s"
+      ),
+      # "rm_cache_dir": True,
+      "merge_output_format": "mkv",
+      "overwrites": False,
+      "fixup": "never",  # "warn",
+      "retries": 20,
+      "fragment_retries": 20,
+      # "sleep_interval": # TODO(alex): dynamically fill in if a playlist etc has been submitted
+      # "max_sleep_interval:" # upper bound for random sleep
+      # "add_metadata": True, # hopefully added in a future update
+      # "embed_metadata": True, # hopefully added in a future update
+      # "trim_file_name": True, # figure out how to do this better
+      # "logger": log, # TODO(alex): this
+      # "download_archive": # set/path of already downloaded files, TODO(alex): look into this
+      "windowsfilenames": True,
+      "consoletitle": True,  # dlp sets progress in the console title
+    },
     "audio": {"format": "bestaudio/best", "postprocessors": [{"key": "FFmpegExtractAudio"}]},
     "captions": {
       "allsubtitles": True,
@@ -261,26 +281,6 @@ class PYTDL(Cmd):
         / "%(series)s"
         / "%(season_number|0)s %(season|)s %(episode_number)02d - %(episode|)s.%(ext)s"
       ),
-    },
-    "default": {
-      "outtmpl": str(
-        home / "Videos" / f"%(uploader,uploader_id|Unknown)s {fmt_timestamp} {fmt_title} [%(id)s].%(ext)s"
-      ),
-      # "rm_cache_dir": True,
-      "merge_output_format": "mkv",
-      "overwrites": False,
-      "fixup": "never",  # "warn",
-      "retries": 20,
-      "fragment_retries": 20,
-      # "sleep_interval": # TODO(alex): dynamically fill in if a playlist etc has been submitted
-      # "max_sleep_interval:" # upper bound for random sleep
-      # "add_metadata": True, # hopefully added in a future update
-      # "embed_metadata": True, # hopefully added in a future update
-      # "trim_file_name": True, # figure out how to do this better
-      # "logger": log, # TODO(alex): this
-      # "download_archive": # set/path of already downloaded files, TODO(alex): look into this
-      "windowsfilenames": True,
-      "consoletitle": True,  # dlp sets progress in the console title
     },
   }
   "The templates that control yt-dlp, such as output file templates, formats, and such settings."
@@ -354,19 +354,23 @@ class PYTDL(Cmd):
     """Get the infodict for a URL."""
     if url in self.info_cache and not ("is_live" in self.info_cache[url] and self.info_cache[url]["is_live"]):
       return self.info_cache[url]
-
-    with YoutubeDL(
-      params={
-        **(self.site_params(url) or self.template["default"]),
-        "simulate": True,
-        "quiet": True,
-        "no_warnings": True,
-        "consoletitle": True,
-      }
-    ) as ydl:
-      info = ydl.extract_info(url, download=False)
-    info = self.filter_info(info)  # type: ignore[reportArgumentType]
-    self.info_cache[url] = info
+    info: dict[str, dict[str, Any] | Any] = {}
+    try:
+      with YoutubeDL(
+        params={
+          **(self.site_params(url) or self.template["default"]),
+          "simulate": True,
+          "quiet": True,
+          "no_warnings": True,
+          "consoletitle": True,
+        }
+      ) as ydl:
+        extracted = ydl.extract_info(url, download=False)
+      if isinstance(extracted, dict):
+        info = self.filter_info(extracted)
+        self.info_cache[url] = info
+    except Exception:
+      logging.exception(f"Exception on {url}")
     return info
 
   def is_supported(self: Self, url: str) -> bool:
@@ -493,6 +497,7 @@ class PYTDL(Cmd):
     """Actually download something."""
     url = self.clean_url(raw_url)
     with YoutubeDL(self.params(url)) as ydl:
+      # ydl.evaluate_outtmpl(ydl.params["outtmpl"], ydl.extract_info(url)) # TODO: for better ensure_dir?
       self.ensure_dir(url)
       try:
         r = ydl.download(url)
@@ -642,13 +647,14 @@ class PYTDL(Cmd):
     >>> info [url] [...] | info 0 5 -2 [url] [...]
     """  # noqa: D415
     for url_ in arg.split():
+      info = "No info found"
       try:
         url = u if (u := self.from_index(url_)) else url_
         info = self.url_info(url)
         print(f"URL: {url}")
         print(f"Title: {info["fulltitle"]}")
         print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
-      except KeyError as err:  # noqa: PERF203
+      except KeyError as err:
         print(err)
       except Exception as err:
         print(info)
@@ -663,7 +669,7 @@ class PYTDL(Cmd):
     """  # noqa: D415
     for url in urls.split():
       info = self.url_info(url)
-      Path(f"{info["id"]}.json").write_text(json.dumps(info))
+      Path(f"{info.get("id") or "dump"}.json").write_text(json.dumps(info))
 
   def do_echo(self: Self, arg: str) -> None:
     """Echoes all URLs as it would try to download them (cleaned up and with potential fixes for common typos etc)."""
