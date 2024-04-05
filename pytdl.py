@@ -272,8 +272,8 @@ class PYTDL(Cmd):
       "writesubtitles": True,
       "username": secrets["crunchyroll"]["username"],
       "password": secrets["crunchyroll"]["password"],
-      # "cookiefile": str(cookies / "crunchy.txt"),
-      # "user-agent": str(cookies / "useragent.txt"),
+      "cookiefile": str(cookies / "crunchyroll.txt"),
+      "user-agent": str(cookies / "useragent.txt"),
       "outtmpl": str(
         home
         / "Videos"
