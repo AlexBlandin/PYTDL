@@ -1,26 +1,67 @@
-[tool.poetry]
-name = "Python Youtube Downloader"
-version = "2.0.0"
-description = "An interactive command-line tool to batch download with yt-dlp"
-authors = ["AlexBlandin"]
-package-mode = false
+[project]
+name = "PYTDL"
+description = "Python Youtube Downloader: An interactive command-line tool to batch download with yt-dlp"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "AlexBlandin" }]
+dependencies = [
+  "yt-dlp",
+  "langcodes",
+  "tqdm",
+  "pytomlpp",
+  "humanize",
+  "mutagen",
+  "beautifulsoup4",
+]
+dynamic = ["version"]
+# version = "2.0.0"
 
-[tool.poetry.dependencies]
-python = "^3.10"
-yt-dlp = "^2023.11.16"
-langcodes = "^3.3.0"
-tqdm = "^4.64.0"
-pytomlpp = "^1.0.10"
-humanize = "^4.0.0"
-mutagen = "^1.45.1"
-beautifulsoup4 = "^4.11.1"
+[project.optional-dependencies]
+toml = ["pytomlpp"]
+cli = ["colorama; platform_system == 'Windows'"]
+all = ["toml", "cli"]
+lint = ["ruff"]
+types = ["mypy"]
+dev = ["all", "lint", "types"]
 
-[tool.poetry.group.dev.dependencies]
-ruff = "^0.2.1"
+[project.urls]
+Documentation = "https://github.com/alexblandin/PYTDL#readme"
+Issues = "https://github.com/alexblandin/PYTDL/issues"
+Source = "https://github.com/alexblandin/PYTDL"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/__init__.py"
+
+[tool.hatch.envs.default]
+dependencies = [
+  "yt-dlp",
+  "langcodes",
+  "tqdm",
+  "pytomlpp",
+  "humanize",
+  "mutagen",
+  "beautifulsoup4",
+]
+features = ["toml", "cli"]
+
+[tool.hatch.envs.lint]
+dependencies = ["lint"]
+detached = true
+
+[tool.hatch.envs.types]
+extra-dependencies = ["mypy>=1.0.0"]
+
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {{args:{package_location}{template_config['package_name']} tests}}"
+
+[tool.hatch.envs.dev]
+features = ["dev"]
+post-install-commands = ["mypy --install-types --non-interactive src/mymodule"]
 
 [tool.ruff]
 indent-width = 2
@@ -29,13 +70,26 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["ALL"]
-ignore = ["G004", # simple f-string logging is fine
-  "ERA", # code comments actually help 
+ignore = [
+  "G004",   # simple f-string logging is fine
+  "ERA",    # code comments actually help 
   "INP001", # useless before hatch
-  "TD003", # not using github to track todo/issues
-  "S311", # I know when to use secrets
-  "T20", # print is good, actually 
- "W191", "E111", "E114", "E117", "E203", "D206", "D212", "D300", "Q", "COM812", "COM819", "ISC001", "ISC002", # these are all formatted away
+  "TD003",  # not using github to track todo/issues
+  "S311",   # I know when to use secrets
+  "T20",    # print is good, actually 
+  "W191",   # ruff format
+  "E111",   # ruff format
+  "E114",   # ruff format
+  "E117",   # ruff format
+  "E203",   # ruff format
+  "D206",   # ruff format
+  "D212",   # ruff format
+  "D300",   # ruff format
+  "Q",      # ruff format
+  "COM812", # ruff format
+  "COM819", # ruff format
+  "ISC001", # ruff format
+  "ISC002", # ruff format
 ]
 
 [tool.ruff.lint.pydocstyle]
@@ -46,16 +100,3 @@ quote-style = "double"
 line-ending = "lf"
 indent-style = "space"
 skip-magic-trailing-comma = false
-
-[tool.isort]
-ensure_newline_before_comments = true
-include_trailing_comma = true
-use_parentheses = true
-comment_prefix = " #"
-multi_line_output = 3
-force_grid_wrap = 0
-reverse_sort = true
-length_sort = true
-line_length = 120
-from_first = true
-indent = "  "

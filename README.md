@@ -2,18 +2,19 @@
 Python YouTube Downloader: An interactive command-line tool to batch download with [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
 
 ## Requirements
-
-- [`poetry install`](https://python-poetry.org/)
-  + [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
-  + [`tqdm`](https://github.com/tqdm/tqdm)
-  + [`pytomlpp`](https://pypi.org/project/pytomlpp/)
-  + [`humanize`](https://github.com/jmoiron/humanize)
-  + [`langcodes`](https://pypi.org/project/langcodes/)
-- [`ffmpeg`](https://ffmpeg.org)
+- [`pip install -r requirements.txt`](https://www.python.org/)
+  - [regenerate with `uv pip compile pyproject.toml -o requirements.txt`](https://github.com/astral-sh/uv)
+  - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
+    + [`ffmpeg`](https://ffmpeg.org)
+    + [`phantomjs`](https://github.com/ariya/phantomjs) (optional)
+  - [`tqdm`](https://github.com/tqdm/tqdm)
+  - [`pytomlpp`](https://pypi.org/project/pytomlpp/)
+  - [`humanize`](https://github.com/jmoiron/humanize)
+  - [`langcodes`](https://pypi.org/project/langcodes/)
 
 ## Configuration
 
-Create a `config.toml` file in this folder to set your configuration. See [TOML](toml.io/en/) for allowed syntax.
+Create a `config.toml` file in `./local/` to set your configuration. See [TOML](toml.io/en/) for allowed syntax.
 
 The following settings can be altered in the top level of the config file, where they must all appear before any `[template]` tables:
 
@@ -36,7 +37,7 @@ config_file: str = pytdl/config.toml # Configuration file to load
 
 ### Output Templates
 
-The output templates and yt-dlp settings can also be modified under the `[template]` table. This is usually via `[template.default]`, which applies to all downloads.
+The output templates and yt-dlp settings can also be modified under the `[template]` table. This is usually via `[template.default]`, which applies to all downloads. See `src/templates.toml` for what this is initialised to before a `config.toml` is loaded.
 
 Some websites will override `[template.default]`:
 - `[template.twitch]` for `twitch.tv` and similar livestream platforms (timestamped videos in `~/Streams/<streamer>/`)

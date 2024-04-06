@@ -1,4 +1,7 @@
-# PYTDL files
+# User files
+local/
+
+# User files (deprecated)
 queue.txt
 config.toml
 history.txt
