@@ -1,6 +1,7 @@
 [project]
 name = "PYTDL"
 description = "Python Youtube Downloader: An interactive command-line tool to batch download with yt-dlp"
+version = "2.0.0"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -14,8 +15,6 @@ dependencies = [
   "mutagen",
   "beautifulsoup4",
 ]
-dynamic = ["version"]
-# version = "2.0.0"
 
 [project.optional-dependencies]
 toml = ["pytomlpp"]
@@ -33,9 +32,6 @@ Source = "https://github.com/alexblandin/PYTDL"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.version]
-path = "src/__init__.py"
 
 [tool.hatch.envs.default]
 dependencies = [
@@ -59,9 +55,9 @@ extra-dependencies = ["mypy>=1.0.0"]
 [tool.hatch.envs.types.scripts]
 check = "mypy --install-types --non-interactive {{args:{package_location}{template_config['package_name']} tests}}"
 
-[tool.hatch.envs.dev]
-features = ["dev"]
-post-install-commands = ["mypy --install-types --non-interactive src/mymodule"]
+# [tool.hatch.envs.dev]
+# features = ["dev"]
+# post-install-commands = ["mypy --install-types --non-interactive src/mymodule"]
 
 [tool.ruff]
 indent-width = 2
@@ -72,8 +68,7 @@ line-length = 120
 select = ["ALL"]
 ignore = [
   "G004",   # simple f-string logging is fine
-  "ERA",    # code comments actually help 
-  "INP001", # useless before hatch
+  "ERA",    # code comments actually help
   "TD003",  # not using github to track todo/issues
   "S311",   # I know when to use secrets
   "T20",    # print is good, actually 

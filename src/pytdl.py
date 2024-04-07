@@ -12,7 +12,6 @@ Requirements:
 Copyright 2019 Alex Blandin
 """
 
-
 import itertools as it
 import json
 import logging  # TODO(alex): actually use logging.warning() etc now
@@ -206,7 +205,10 @@ class PYTDL(Cmd):
     },
     "playlist": {
       "outtmpl": str(
-        home / "Videos" / "%(playlist_title)s" / f"%(playlist_autonumber,playlist_index|)03d {fmt_title}.%(ext)s"
+        home
+        / "Videos"
+        / "%(playlist_title)s"
+        / f"%(playlist_autonumber,playlist_index|)03d %(uploader,uploader_id|Unknown)s {fmt_title} [%(id)s].%(ext)s"
       )
     },
     "podcast": {
@@ -989,7 +991,7 @@ def merge_subs(path: Path = Path()) -> None:
   _pair: dict[Path, Path | None] = {vid: None for vid in vids}
   lang = {}
   for sub in subs:
-    suffix = next(filter(langcodes.tag_is_valid, map(lambda s: s.removeprefix("."), sub.suffixes)), None)
+    suffix = next(filter(langcodes.tag_is_valid, (s.removeprefix(".") for s in sub.suffixes)), None)
     if suffix:
       v = sub.with_stem(sub.stem.removesuffix(f".{suffix}")).with_suffix(".mp4")
       if v in _pair:
