@@ -85,7 +85,7 @@ class PYTDL(Cmd):
   "Which URLs have we deleted from the queue or history"
   info_cache: dict[str, dict[str, Any]]
   "URL info we can save between uses"
-  local = Path(__file__).parent.parent / "local"
+  local = Path(__file__).parent / "local"
   "The path where history.txt, config.toml, cookies/, etc., are stored"
   home = Path.home()
   "Where the user's home directory is"
