@@ -62,6 +62,7 @@ RE_IS_URL_P4 = re.compile(
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
 RE_YT_VID_MANGLED = re.compile(r"/watch&v=[\w_\-]+")
 RE_YT_FLUFF_SI = re.compile(r"[\?&]si=[\w_\-%]+")  # nasty tracking YT added
+RE_YT_FLUFF_TIME = re.compile(r"[\?&]t=\d+s")
 RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-%]+")
 RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
 RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")
@@ -444,6 +445,8 @@ class PYTDL(Cmd):
       if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_PP, "", url)):
         url = tmp
       if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_SI, "", url)):
+        url = tmp
+      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_TIME, "", url)):
         url = tmp
       if re.search(RE_YT_VID_MANGLED, url):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
