@@ -17,47 +17,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-toml = ["pytomlpp"]
-cli = ["colorama; platform_system == 'Windows'"]
-all = ["toml", "cli"]
-lint = ["ruff"]
-types = ["mypy"]
-dev = ["all", "lint", "types"]
+dev = ["ruff"]
 
 [project.urls]
 Documentation = "https://github.com/alexblandin/PYTDL#readme"
 Issues = "https://github.com/alexblandin/PYTDL/issues"
 Source = "https://github.com/alexblandin/PYTDL"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.envs.default]
-dependencies = [
-  "yt-dlp",
-  "langcodes",
-  "tqdm",
-  "pytomlpp",
-  "humanize",
-  "mutagen",
-  "beautifulsoup4",
-]
-features = ["toml", "cli"]
-
-[tool.hatch.envs.lint]
-dependencies = ["lint"]
-detached = true
-
-[tool.hatch.envs.types]
-extra-dependencies = ["mypy>=1.0.0"]
-
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {{args:{package_location}{template_config['package_name']} tests}}"
-
-# [tool.hatch.envs.dev]
-# features = ["dev"]
-# post-install-commands = ["mypy --install-types --non-interactive src/mymodule"]
 
 [tool.ruff]
 indent-width = 2
