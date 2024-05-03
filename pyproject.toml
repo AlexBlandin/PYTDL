@@ -12,8 +12,9 @@ dependencies = [
   "tqdm",
   "pytomlpp",
   "humanize",
-  "mutagen",
   "beautifulsoup4",
+  "attrs",
+  "cattrs",
 ]
 
 [project.optional-dependencies]
