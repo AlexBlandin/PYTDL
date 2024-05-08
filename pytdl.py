@@ -48,14 +48,24 @@ RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags=re.I | re.M)
 RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M)
 "regex by @imme_emosol"
 RE_IS_URL_P3 = re.compile(
-  0
-  * r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%",  # noqa: E501
+  0  # 0*(...) to just discard a non-python regex pattern (for now) # TODO(alex): convert to python regex pattern
+  * (
+    r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)"
+    r"(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])"
+    r"(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|"
+    r"(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+"
+    r"(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%"
+  ),
   re.I | re.M,
 )
 "regex by @diegoperini"  # PHP regex
 RE_IS_URL_P4 = re.compile(
-  0
-  * r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b",  # noqa: E501
+  0  # 0*(...) to just discard a non-python regex pattern (for now) # TODO(alex): convert to python regex pattern
+  * (
+    r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+"
+    r"(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)"
+    r"(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b"
+  ),
   re.I | re.M,
 )
 "regex from the Spoon library"  # re.IGNORECASE | re.MULTILINE # PHP regex?
@@ -352,7 +362,7 @@ class PYTDL(Cmd):
       info = self.url_info(url)
     if info is None:
       if not self.is_quiet:
-        print(url, "is not supported")
+        print(url, "is not supported")  # noqa: T201
       return False
     return True
 
@@ -377,7 +387,7 @@ class PYTDL(Cmd):
     with suppress(Exception):
       info = self.url_info(url)
       if "is_live" in info:
-        return info["is_live"]  # type: ignore[reportReturnType]
+        return info["is_live"]
     return False
 
   def is_podcast(self: Self, url: str) -> bool:
@@ -411,7 +421,7 @@ class PYTDL(Cmd):
     # )  # can't use bc. template's parents
     for parent in [
       parent
-      for parent in Path(self.params(url, take_input=False)["outtmpl"]).expanduser().parents  # type: ignore[reportArgumentType]
+      for parent in Path(self.params(url, take_input=False)["outtmpl"]).expanduser().parents
       if not parent.exists() and "%(" not in parent.name and ")s" not in parent.name
     ][::-1]:
       parent.mkdir()
@@ -422,7 +432,7 @@ class PYTDL(Cmd):
       return unique_list(map(self.clean_url, filter(None, map(str.strip, f.read_text(encoding="utf8").splitlines()))))
     return []
 
-  def writefile(self: Self, path: str | Path, lines: list) -> None:
+  def writefile(self: Self, path: str | Path, lines: list[str]) -> None:
     """Writes lines to a file."""
     f = Path(path).expanduser()
     f.write_text("\n".join(unique_list(map(self.clean_url, filter(None, lines)))), encoding="utf8", newline="\n")
@@ -465,7 +475,7 @@ class PYTDL(Cmd):
     """Actually download something."""
     url = self.clean_url(raw_url)
     with YoutubeDL(self.params(url)) as ydl:
-      # ydl.evaluate_outtmpl(ydl.params["outtmpl"], ydl.extract_info(url)) # TODO: for better ensure_dir?
+      # ydl.evaluate_outtmpl(ydl.params["outtmpl"], ydl.extract_info(url)) # TODO(alex): for better ensure_dir?
       self.ensure_dir(url)
       try:
         r = ydl.download(url)
@@ -474,7 +484,7 @@ class PYTDL(Cmd):
       except SystemExit:
         raise
       except Exception as err:  # noqa: BLE001
-        print(err)
+        print(err)  # noqa: T201
         r = 1
     if r:
       if not self.is_idle and yesno(f"Did {url} download properly?"):
@@ -499,14 +509,14 @@ class PYTDL(Cmd):
     def yesify(b: bool, /) -> Literal["Yes", "No"]:  # noqa: FBT001
       return "Yes" if b else "No"
 
-    print("Mode:", "Idle" if self.is_idle else "Interactive")
-    print("ASCII:", yesify(self.is_ascii))
-    print("Quiet:", yesify(self.is_quiet))
-    print("Audio:", yesify(self.is_audio))
-    print("Captions:", yesify(self.is_captions))
-    print("Dated:", yesify(self.is_dated))
-    print("Sleep interval:", self.naptime, "seconds")
-    print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")
+    print("Mode:", "Idle" if self.is_idle else "Interactive")  # noqa: T201
+    print("ASCII:", yesify(self.is_ascii))  # noqa: T201
+    print("Quiet:", yesify(self.is_quiet))  # noqa: T201
+    print("Audio:", yesify(self.is_audio))  # noqa: T201
+    print("Captions:", yesify(self.is_captions))  # noqa: T201
+    print("Dated:", yesify(self.is_dated))  # noqa: T201
+    print("Sleep interval:", self.naptime, "seconds")  # noqa: T201
+    print("Max resolution:", f"{self.maxres}p" if self.maxres else "Unlimited")  # noqa: T201
 
   def do_config(self: Self, arg: str | Path = "") -> None:
     """
@@ -540,32 +550,32 @@ class PYTDL(Cmd):
   def do_audio(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL treat urls as only audio by default."""
     self.is_audio = not self.is_audio
-    print("Audio!" if self.is_audio else "Not audio...")
+    print("Audio!" if self.is_audio else "Not audio...")  # noqa: T201
 
   def do_captions(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL treat urls as only captions by default."""
     self.is_captions = not self.is_captions
-    print("Captions!" if self.is_captions else "Not captions...")
+    print("Captions!" if self.is_captions else "Not captions...")  # noqa: T201
 
   def do_quiet(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL is quiet or not."""
     self.is_quiet = not self.is_quiet
-    print("Shh" if self.is_quiet else "BOO!")
+    print("Shh" if self.is_quiet else "BOO!")  # noqa: T201
 
   def do_dated(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL dates videos by default."""
     self.is_dated = not self.is_dated
-    print("Dating now" if self.is_dated else "Dateless...")
+    print("Dating now" if self.is_dated else "Dateless...")  # noqa: T201
 
   def do_forced(self: Self, _arg: str = "") -> None:
     """Toggle whether to force redownloads of videos."""
     self.is_forced = not self.is_forced
-    print("Force downloads" if self.is_forced else "Doesn't force downloads")
+    print("Force downloads" if self.is_forced else "Doesn't force downloads")  # noqa: T201
 
   def do_idle(self: Self, _arg: str = "") -> None:
     """Idle mode keeps you from having to interact with the batch downloader, letting you go do something else."""
     self.is_idle = not self.is_idle
-    print("Idling" if self.is_idle else "Interactive")
+    print("Idling" if self.is_idle else "Interactive")  # noqa: T201
 
   def do_naptime(self: Self, arg: str) -> None:
     """How long do we sleep between downloads (on average)?"""
@@ -573,7 +583,7 @@ class PYTDL(Cmd):
       self.naptime = int(arg)
     if self.naptime < 0:
       self.naptime = 0
-    print(f"We sleep for {self.naptime}s on average.")
+    print(f"We sleep for {self.naptime}s on average.")  # noqa: T201
 
   def do_res(self: Self, arg: str) -> None:
     """
@@ -585,7 +595,7 @@ class PYTDL(Cmd):
       self.maxres = int(arg)
     else:
       self.maxres = 0
-    print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")
+    print(f"We will go up to {self.maxres}p" if self.maxres else "We have no limits on resolution")  # noqa: T201
 
   ###################
   ## User Commands ##
@@ -597,16 +607,16 @@ class PYTDL(Cmd):
 
     >>> print | print 0 | @ 0 | @ 1 2 5 | @ -1
     """  # noqa: D415
-    print(f"There are {len(self.queue)} URLs in the queue")
+    print(f"There are {len(self.queue)} URLs in the queue")  # noqa: T201
     if len(self.queue):
       if len(arg):
         for url_ in arg.split():
           url = self.from_index(url_)
           if url:
-            print(url)
+            print(url)  # noqa: T201
       else:
         for url in self.queue:
-          print(url)
+          print(url)  # noqa: T201
 
   def do_info(self: Self, arg: str) -> None:
     """
@@ -619,14 +629,14 @@ class PYTDL(Cmd):
       try:
         url = u if (u := self.from_index(url_)) else url_
         info = self.url_info(url)
-        print(f"URL: {url}")
-        print(f"Title: {info["fulltitle"]}")
-        print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")
+        print(f"URL: {url}")  # noqa: T201
+        print(f"Title: {info["fulltitle"]}")  # noqa: T201
+        print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")  # noqa: T201
       except KeyError as err:
-        print(err)
+        print(err)  # noqa: T201
       except Exception as err:
-        print(info)
-        print(err)
+        print(info)  # noqa: T201
+        print(err)  # noqa: T201
         raise
 
   def do_infodump(self: Self, urls: str) -> None:
@@ -644,9 +654,9 @@ class PYTDL(Cmd):
     if len(arg) and len(q := arg.split()):
       for p in q:
         if self.is_url(p):
-          print(self.clean_url(p))
+          print(self.clean_url(p))  # noqa: T201
         else:
-          print(p)
+          print(p)  # noqa: T201
 
   def do_add(self: Self, arg: str, *, check_supported: bool = False) -> None:
     """
@@ -696,7 +706,7 @@ class PYTDL(Cmd):
       arg = self.queue_file
     self.queue = {k: v for k, v in self.queue.items() if k not in self.history}
     if len(self.queue):
-      print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")
+      print(f"There are {len(self.queue)} urls in the queue that have not been downloaded.")  # noqa: T201
     if yesno(f"Do you want to remove all {len(self.queue)} urls from the queue?") and yesno("Are you sure about this?"):
       self.queue.clear()
     if yesno(f"Do you want to remove all {len(self.readfile(arg))} urls the queue file?") and yesno(
@@ -713,7 +723,7 @@ class PYTDL(Cmd):
     """  # noqa: D415
     if isinstance(arg, str) and len(arg) == 0:
       arg = self.history_file
-    if yesno("Do you want to forget the history of dl'd videos?") and yesno("Are you sure about this?"):
+    if yesno("Do you want to forget the history of dl'd URLs?") and yesno("Are you sure about this?"):
       self.history.clear()
       self.info_cache.clear()
     if yesno("Do you want to forget the history file?") and yesno("Are you sure about this?"):
@@ -727,8 +737,8 @@ class PYTDL(Cmd):
     """  # noqa: D415
     still_live, urls = [], arg.split() if isinstance(arg, str) else arg
     if len(urls):
-      set_title(f"downloading {len(urls)} video{"s" * (len(urls) != 1)}")
-      print(f"Getting {len(urls)} video{"s" * (len(urls) != 1)}")
+      set_title(f"downloading {len(urls)} URL{"s" * (len(urls) != 1)}")
+      print(f"Getting {len(urls)} URL{"s" * (len(urls) != 1)}")  # noqa: T201
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii=self.is_ascii, ncols=100, unit="vid"):
           if (
@@ -745,12 +755,12 @@ class PYTDL(Cmd):
             self.download(url)
             sleep(randint(0, self.naptime * 2) + random())
       except KeyboardInterrupt:
-        print()
-        print("Stopped by user")
+        print()  # noqa: T201
+        print("Stopped by user")  # noqa: T201
       except Exception:
         raise
     else:
-      print("No videos to download")
+      print("No videos to download")  # noqa: T201
     self.update_history()
     if len(still_live):
       self.do_wait(" ".join(still_live))
@@ -781,10 +791,10 @@ class PYTDL(Cmd):
       self.do_add(line, check_supported=check_supported)
     post = len(self.queue)
     if post > pre:
-      print(f"Added {post - pre} URLs from {path}")
+      print(f"Added {post - pre} URLs from {path}")  # noqa: T201
     if get_history:
       self.update_history()
-    set_title(f"loaded {len(self.queue)} videos {f", {len(self.queue) - pre} new" if pre else ""}")
+    set_title(f"loaded {len(self.queue)} URLs {f", {len(self.queue) - pre} new" if pre else ""}")
 
   def do_save(self: Self, arg: str = "") -> None:
     """
@@ -828,7 +838,7 @@ class PYTDL(Cmd):
         try:
           sleep(wait + randint(0, wait // 3) + random())  # w/ jitter
         except KeyboardInterrupt:
-          if not yesno("Test if the video is live now?") and not yesno("Do you want to continue waiting?"):
+          if not yesno("Test if the URL is currently livestreaming?") and not yesno("Do you want to continue waiting?"):
             break
         if self.is_live(url):
           urls.append(url)
@@ -878,8 +888,8 @@ class PYTDL(Cmd):
     arg = arg if arg.is_file() else Path(self.queue_file).expanduser()
     self.do_save(_arg)
     set_title("exitting")
-    logging.debug(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
-    print(f"Exitting, saved {len(self.readfile(arg))} videos to {arg}")
+    logging.debug(f"Exitting, saved {len(self.readfile(arg))} URLs to {arg}")
+    print(f"Exitting, saved {len(self.readfile(arg))} URLs to {arg}")  # noqa: T201
     sleep(2.0)
     logging.debug("Exit complete")
     return True
@@ -889,7 +899,7 @@ class PYTDL(Cmd):
   ##################
 
   def postcmd(self: Self, stop, _line) -> bool:  # noqa: ANN001, D102
-    set_title(f"{len(self.queue)} queued videos" if len(self.queue) else "")
+    set_title(f"{len(self.queue)} queued URLs" if len(self.queue) else "")
     return stop
 
   def preloop(self: Self) -> None:  # noqa: D102
@@ -952,7 +962,7 @@ def strict_dict_update(old: dict, new: dict, path: list[str]) -> None:
 
 def set_title(s: str) -> None:
   """Set the console title."""
-  print(f"\33]0;PYTDL: {s}\a", end="", flush=True)
+  print(f"\33]0;PYTDL: {s}\a", end="", flush=True)  # noqa: T201
 
 
 def unique_list(xs: Iterable) -> list:
@@ -1001,7 +1011,7 @@ def merge_subs(path: Path = Path()) -> None:
         lang[sub] = langcodes.get(suffix).to_alpha3()
         _pair[v] = sub
     else:
-      print(f"We are missing a language code (i.e. en-US) on {sub}")
+      print(f"We are missing a language code (i.e. en-US) on {sub}")  # noqa: T201
 
   pair: dict[Path, Path] = {vid: sub for vid, sub in _pair.items() if sub is not None}
   for vid, sub in pair.items():
@@ -1012,7 +1022,7 @@ def merge_subs(path: Path = Path()) -> None:
           check=False,
         )
       ).returncode:
-        pprint(r)
+        pprint(r)  # noqa: T203
       else:
         break
     else:
