@@ -96,11 +96,11 @@ class PYTDL(Cmd):
   "Which URLs have we deleted from the queue or history"
   info_cache: dict[str, dict[str, Any]]
   "URL info we can save between uses"
-  local = Path(__file__).parent / "local"
-  "The path where history.txt, config.toml, cookies/, etc., are stored"
-  home = Path.home()
-  "Where the user's home directory is"
-  cookies = local / "cookies"
+  local: str | Path = Path(__file__).parent / "local"
+  "The path where queue.txt, config.toml, cookies/, etc., are stored"
+  home: str | Path = Path.home()
+  "Where the user's home directory is, where we download to by default"
+  cookies: str | Path = local / "cookies"
   "Where we keep cookies for yt-dlp to use"
 
   ###################
@@ -133,7 +133,7 @@ class PYTDL(Cmd):
   "Where to save download history"
   config_file: str | Path = local / "config.toml"
   "Configuration file to load"
-  secrets = toml.load(local / "secrets.toml")
+  secrets: str | Path | dict[str, str | dict[str, str]] = toml.load(local / "secrets.toml")
   "Where to load secrets (usernames/passwords, etc)"
 
   fmt_timestamp = "%(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s"
@@ -539,12 +539,33 @@ class PYTDL(Cmd):
           raise TypeError(key, t)
 
     for key, val in config.items():
-      if (key in self.__dict__ or key in PYTDL.__dict__) and isinstance(val, type(self.__getattribute__(key))):
+      if (key in self.__dict__ or key in PYTDL.__dict__) and isinstance(val, type(getattr(self, key))):
         if isinstance(val, dict):
-          strict_dict_update(self.__getattribute__(key), val, [key])
+          strict_dict_update(getattr(self, key), val, [key])
         else:
-          self.__setattr__(key, val)
+          setattr(self, key, val)
 
+    # Some fields must be Paths # TODO(alex): these don't propagate!
+    for field in ("home", "local", "cookies", "queue_file", "history_file", "config_file", "secrets"):      
+      match getattr(self, field):
+        case str(is_str):
+          setattr(self, field, Path(is_str))
+        case Path() | dict():
+          pass
+        case _:
+          raise TypeError
+    
+    # self.secrets must be a dict as if loaded from TOML
+    match self.secrets:
+      case str(secrets_file):
+        self.secrets = toml.load(Path(secrets_file))
+      case Path() as secrets_file:
+        self.secrets = toml.load(Path(secrets_file))
+      case dict(secrets):
+        pass
+      case _:
+        raise TypeError
+    
     logging.config.dictConfig(self.log_config)
 
   def do_audio(self: Self, _arg: str = "") -> None:
