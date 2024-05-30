@@ -26,7 +26,7 @@ langcodes==3.4.0
     # via pytdl (pyproject.toml)
 language-data==1.2.0
     # via langcodes
-marisa-trie==1.1.0
+marisa-trie==1.1.1
     # via language-data
 mutagen==1.47.0
     # via yt-dlp
@@ -34,9 +34,9 @@ pycryptodomex==3.20.0
     # via yt-dlp
 pytomlpp==1.0.13
     # via pytdl (pyproject.toml)
-requests==2.31.0
+requests==2.32.3
     # via yt-dlp
-setuptools==69.5.1
+setuptools==70.0.0
     # via marisa-trie
 soupsieve==2.5
     # via beautifulsoup4
@@ -48,5 +48,5 @@ urllib3==2.2.1
     #   yt-dlp
 websockets==12.0
     # via yt-dlp
-yt-dlp==2024.4.9
+yt-dlp==2024.5.27
     # via pytdl (pyproject.toml)
