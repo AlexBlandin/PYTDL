@@ -8,13 +8,14 @@ license = "MIT"
 authors = [{ name = "AlexBlandin" }]
 dependencies = [
   "yt-dlp>=2024.04.09",
-  "langcodes",
   "tqdm",
-  "pytomlpp",
-  "humanize",
-  "beautifulsoup4",
   "attrs",
   "cattrs",
+  "ada_url",
+  "pytomlpp",
+  "humanize",
+  "langcodes",
+  "beautifulsoup4",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,7 @@ ignore = [
   "TD003",  # not using github to track todo/issues
   "S311",   # I know when to use secrets
   # "T20",    # print is good, actually 
+  "D202",   # a little vertical separation can be nice
   "W191",   # ruff format
   "E111",   # ruff format
   "E114",   # ruff format

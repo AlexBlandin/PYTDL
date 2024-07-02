@@ -2,12 +2,15 @@
 Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
 
 Requirements:
-- ffmpeg
-- yt-dlp
-- tqdm
-- pytomlpp
-- humanize
-- langcodes
+- ffmpeg: https://ffmpeg.org (`.exe`: https://www.gyan.dev/ffmpeg/builds/)
+- yt_dlp: https://pypi.org/project/yt-dlp/
+- tqdm: https://pypi.org/project/tqdm/
+- attrs: https://pypi.org/project/attrs/
+- cattrs: https://pypi.org/project/cattrs/
+- ada_url: https://pypi.org/project/ada-url/
+- pytomlpp: https://pypi.org/project/pytomlpp/
+- humanize: https://pypi.org/project/humanize/
+- langcodes: https://pypi.org/project/langcodes/
 
 Copyright 2019 Alex Blandin
 """
@@ -35,6 +38,7 @@ from typing import Any, Literal, Self
 
 import langcodes  # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
 import pytomlpp as toml
+from ada_url import URL
 from humanize import naturaltime
 from tqdm import tqdm
 from yt_dlp import YoutubeDL
@@ -43,32 +47,6 @@ from yt_dlp import YoutubeDL
 # 1: optional fields without added whitespace
 # 2: dynamic truncation of fields we can safely truncate (title, etc), so we never lose id etc
 
-RE_IS_URL_P1 = re.compile(r"^https?://[^\s/$.?#].[^\s]*$", flags=re.I | re.M)
-"regex by @stephenhay"
-RE_IS_URL_P2 = re.compile(r"@(https?)://(-\.)?([^\s/?\.#-]+\.?)+(/[^\s]*)?$@", re.I | re.M)
-"regex by @imme_emosol"
-RE_IS_URL_P3 = re.compile(
-  0  # 0*(...) to just discard a non-python regex pattern (for now) # TODO(alex): convert to python regex pattern
-  * (
-    r"%^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)"
-    r"(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])"
-    r"(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|"
-    r"(?:(?:[a-z0-9\x{00a1}-\x{ffff}][a-z0-9\x{00a1}-\x{ffff}_-]{0,62})?[a-z0-9\x{00a1}-\x{ffff}]\.)+"
-    r"(?:[a-z\x{00a1}-\x{ffff}]{2,}\.?))(?::\d{2,5})?(?:[/?#]\S*)?$%"
-  ),
-  re.I | re.M,
-)
-"regex by @diegoperini"  # PHP regex
-RE_IS_URL_P4 = re.compile(
-  0  # 0*(...) to just discard a non-python regex pattern (for now) # TODO(alex): convert to python regex pattern
-  * (
-    r"/(((https?):\/{2})+(([0-9a-z_-]+\.)+"
-    r"(aero|asia|biz|cat|com|coop|edu|gov|info|int|jobs|mil|mobi|museum|name|net|org|pro|tel|travel|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|ax|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|cz|de|dj|dk|dm|do|dz|ec|ee|eg|er|es|et|eu|fi|fj|fk|fm|fo|fr|ga|gb|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|me|mg|mh|mk|ml|mn|mn|mo|mp|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|nom|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ra|rs|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sj|sk|sl|sm|sn|so|sr|st|su|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tl|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw|arpa)"
-    r"(:[0-9]+)?((\/([~0-9a-zA-Z\#\+\%@\.\/_-]+))?(\?[0-9a-zA-Z\+\%@\/&\[\];=_-]+)?)?))\b"
-  ),
-  re.I | re.M,
-)
-"regex from the Spoon library"  # re.IGNORECASE | re.MULTILINE # PHP regex?
 RE_YT_VID = re.compile(r"v=[\w_\-]+")
 RE_YT_VID_MANGLED = re.compile(r"/watch&v=[\w_\-]+")
 RE_YT_FLUFF_SI = re.compile(r"[\?&]si=[\w_\-%]+")  # nasty tracking YT added
@@ -225,6 +203,10 @@ class PYTDL(Cmd):
     "podcast": {
       "outtmpl": str(home / "Videos" / "Podcasts" / f"{fmt_title} %(webpage_url_basename)s [%(id)s].%(ext)s")
     },
+    "nebula": {
+      "username": secrets["nebula"]["username"],
+      "password": secrets["nebula"]["password"],
+    },
     "twitter": {
       "username": secrets["twitter"]["username"],
       "password": secrets["twitter"]["password"],
@@ -269,6 +251,8 @@ class PYTDL(Cmd):
     """Specific parameters for known sites, including credentials."""
     if self.is_crunchyroll(url):
       return self.template["crunchyroll"]
+    if self.is_nebula(url):
+      return self.template["nebula"]
     if self.is_twitter(url):
       return self.template["twitter"]
     if self.is_twitch(url):
@@ -317,14 +301,13 @@ class PYTDL(Cmd):
     return info
 
   def is_url(self: Self, url: str) -> bool:
-    """probably, based on the regex patterns from @stephenhay, @imme_emosol, @diegoperini, and the Spoon Library, tried in that order to catch."""  # noqa: E501
-    return RE_IS_URL_P1.match(url) is not None  # for now, until I convert P2-4 to Python regex, just this
-    if RE_IS_URL_P1.match(url) is not None:  # handles all positive cases and most negative edge cases
+    """Is this a URL?"""
+    try:
+      _ = URL(url)
+    except ValueError:
+      return False
+    else:
       return True
-    return None
-    # if RE_IS_URL_P2.match(url) is None or RE_IS_URL_P3.match(url) is None: # anything we don't match here covers for the rest of the negative edge cases  # noqa: E501
-    #   return False
-    # return RE_IS_URL_P4.match(url) is not None # so now any that don't pass are REALLY probably not URLs, etc, last due to being much slower (big regex)  # noqa: E501
 
   def url_info(self: Self, url: str) -> dict[str, dict[str, Any] | Any]:
     """Get the infodict for a URL."""
@@ -394,21 +377,27 @@ class PYTDL(Cmd):
     """Is a URL a podcast?"""
     return "podcast" in url
 
+  def is_crunchyroll(self: Self, url: str) -> bool:
+    """Is a URL for Crunchyroll?"""
+    return "crunchyroll" in URL(url).hostname
+
+  def is_nebula(self: Self, url: str) -> bool:
+    """Is a URL for nebula.tv?"""
+    return "nebula.tv" in URL(url).hostname
+
   def is_twitch(self: Self, url: str) -> bool:
     """Is a URL for twitch.tv?"""
-    return "twitch.tv" in url
+    return "twitch.tv" in URL(url).hostname
 
   def is_twitter(self: Self, url: str) -> bool:
     """Is a URL for twitter.com?"""
-    return "twitter.com" in url
-
-  def is_crunchyroll(self: Self, url: str) -> bool:
-    """Is a URL for Crunchyroll?"""
-    return "crunchyroll" in url
+    return "twitter.com" in URL(url).hostname
 
   def is_youtube(self: Self, url: str) -> bool:
     """Is a URL for Youtube?"""
-    return "youtube.com/" in url or "youtu.be/" in url
+    hostname = URL(url).hostname
+    frontends = ("youtube.com/", "youtu.be/", "piped.video/")
+    return any(frontend in hostname for frontend in frontends)
 
   #########
   ## I/O ##
@@ -462,7 +451,7 @@ class PYTDL(Cmd):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
     if "youtube.com/shorts/" in url:
       url = url.replace("/shorts/", "/watch?v=", 1)
-    if "piped.kavin.rocks/" in url:
+    if "piped.video/" in url:
       url = url.replace("piped.kavin.rocks/", "youtube.com/", 1)
     if "imgur.artemislena.eu/" in url:
       if "imgur.artemislena.eu/gallery/" in url:
@@ -546,7 +535,7 @@ class PYTDL(Cmd):
           setattr(self, key, val)
 
     # Some fields must be Paths # TODO(alex): these don't propagate!
-    for field in ("home", "local", "cookies", "queue_file", "history_file", "config_file", "secrets"):      
+    for field in ("home", "local", "cookies", "queue_file", "history_file", "config_file", "secrets"):
       match getattr(self, field):
         case str(is_str):
           setattr(self, field, Path(is_str))
@@ -554,7 +543,7 @@ class PYTDL(Cmd):
           pass
         case _:
           raise TypeError
-    
+
     # self.secrets must be a dict as if loaded from TOML
     match self.secrets:
       case str(secrets_file):
@@ -565,7 +554,7 @@ class PYTDL(Cmd):
         pass
       case _:
         raise TypeError
-    
+
     logging.config.dictConfig(self.log_config)
 
   def do_audio(self: Self, _arg: str = "") -> None:
