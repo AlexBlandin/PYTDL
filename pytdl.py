@@ -1028,7 +1028,7 @@ def merge_subs(path: Path = Path()) -> None:
     for _ in range(2):  # how many tries
       if (
         r := run(
-          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" ',  # noqa: E501, S603
+          f'ffmpeg -v "warning" -i "{vid}" -i "{sub}" -map 0 -c:v copy -c:a copy -map "-0:s" -map "-0:d" -c:s copy -map "1:0" "-metadata:s:s:0" "language={lang[sub]}" "{vid.with_suffix(".mkv")}" ',  # noqa: E501
           check=False,
         )
       ).returncode:
