@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 license = "MIT"
 authors = [{ name = "AlexBlandin" }]
 dependencies = [
-  "yt-dlp>=2024.04.09",
+  "yt-dlp[default]>=2024.10.22",
   "tqdm",
   "attrs",
   "cattrs",
