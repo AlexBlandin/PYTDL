@@ -224,7 +224,12 @@ class PYTDL(Cmd):
         home / "Videos" / "Streams" / "%(uploader,uploader_id|Unknown)s" / f"{fmt_timestamp} %(title)s.%(ext)s"
       ),
     },
-    "youtube": {},  # {"embed_chapters": True, "embed_thumbnail": True},
+    "youtube": {
+      "embed_chapters": True,
+      "embed_thumbnail": True,
+      "subtitleslangs": ["en", "eng", "gb", "enGB", "enUK", "enUS", "en-GB", "en-UK", "en-US"],
+      "writesubtitles": True,
+    },
     "crunchyroll": {  # doesn't work currently as there's no way to pass user-agent
       "subtitleslangs": ["en-US"],
       "writesubtitles": True,
@@ -391,12 +396,12 @@ class PYTDL(Cmd):
 
   def is_twitter(self: Self, url: str) -> bool:
     """Is a URL for twitter.com?"""
-    return "twitter.com" in URL(url).hostname
+    return "twitter.com" in URL(url).hostname or "x.com" in URL(url).hostname
 
   def is_youtube(self: Self, url: str) -> bool:
     """Is a URL for Youtube?"""
     hostname = URL(url).hostname
-    frontends = ("youtube.com/", "youtu.be/", "piped.video/")
+    frontends = ("youtube.com", "youtu.be", "piped.video", "piped.projectsegfau.lt")
     return any(frontend in hostname for frontend in frontends)
 
   #########
@@ -432,7 +437,9 @@ class PYTDL(Cmd):
     self.writefile(self.history_file, sorted(self.history))
 
   def clean_url(self: Self, url: str):  # noqa: ANN201, C901, D102
-    if "youtube.com" in url or "youtu.be" in url and "playlist" not in url:
+    if "piped.video/" in url or "piped.projectsegfau.lt/" in url:
+      url = url.replace("piped.video/", "youtube.com/", 1).replace("piped.projectsegfau.lt/", "youtube.com/", 1)
+    if "youtube.com" in url or ("youtu.be" in url and "playlist" not in url):
       # TODO(alex): better system than this, actually semantically extract & discard
       # for example, to deal with youtu.be/ExampleVid?si=creepytracking
       # so we just pull out "oh, this is the vid" and discard the rest, really
@@ -451,8 +458,6 @@ class PYTDL(Cmd):
         url = re.sub(r"/watch&v=", "/watch?v=", url)
     if "youtube.com/shorts/" in url:
       url = url.replace("/shorts/", "/watch?v=", 1)
-    if "piped.video/" in url:
-      url = url.replace("piped.kavin.rocks/", "youtube.com/", 1)
     if "imgur.artemislena.eu/" in url:
       if "imgur.artemislena.eu/gallery/" in url:
         url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/", 1)
@@ -591,8 +596,7 @@ class PYTDL(Cmd):
     """How long do we sleep between downloads (on average)?"""
     if arg.isdecimal():
       self.naptime = int(arg)
-    if self.naptime < 0:
-      self.naptime = 0
+    self.naptime = max(self.naptime, 0)
     print(f"We sleep for {self.naptime}s on average.")  # noqa: T201
 
   def do_res(self: Self, arg: str) -> None:
@@ -640,7 +644,7 @@ class PYTDL(Cmd):
         url = u if (u := self.from_index(url_)) else url_
         info = self.url_info(url)
         print(f"URL: {url}")  # noqa: T201
-        print(f"Title: {info["fulltitle"]}")  # noqa: T201
+        print(f"Title: {info['fulltitle']}")  # noqa: T201
         print("Playlist" if self.is_playlist(url) else "Livestream" if self.is_live(url) else "VOD")  # noqa: T201
       except KeyError as err:
         print(err)  # noqa: T201
@@ -657,7 +661,7 @@ class PYTDL(Cmd):
     """  # noqa: D415
     for url in urls.split():
       info = self.url_info(url)
-      (self.local / "info" / f"{info.get("id") or "dump"}.json").write_text(json.dumps(info))
+      (self.local / "info" / f"{info.get('id') or 'dump'}.json").write_text(json.dumps(info))
 
   def do_echo(self: Self, arg: str) -> None:
     """Echoes all URLs as it would try to download them (cleaned up and with potential fixes for common typos etc)."""
@@ -746,9 +750,10 @@ class PYTDL(Cmd):
     >>> get [url] [...] | ! [url] [...]
     """  # noqa: D415
     still_live, urls = [], arg.split() if isinstance(arg, str) else arg
+    urls = list(map(self.clean_url, urls))
     if len(urls):
-      set_title(f"downloading {len(urls)} URL{"s" * (len(urls) != 1)}")
-      print(f"Getting {len(urls)} URL{"s" * (len(urls) != 1)}")  # noqa: T201
+      set_title(f"downloading {len(urls)} URL{'s' * (len(urls) != 1)}")
+      print(f"Getting {len(urls)} URL{'s' * (len(urls) != 1)}")  # noqa: T201
       try:
         for i, url in tqdm(enumerate(urls, 1), ascii=self.is_ascii, ncols=100, unit="vid"):
           if (
@@ -756,8 +761,7 @@ class PYTDL(Cmd):
             and (
               url not in self.history or self.is_forced or (not self.is_idle and yesno(f"Try download {url} again?"))
             )
-            or "playlist" in url
-          ):
+          ) or "playlist" in url:
             set_title(f"[{i}/{len(urls)}] {url}")
             if self.is_live(url) and (self.is_idle or yesno("Currently live, shall we skip and try again later?")):
               still_live.append(url)
@@ -804,7 +808,7 @@ class PYTDL(Cmd):
       print(f"Added {post - pre} URLs from {path}")  # noqa: T201
     if get_history:
       self.update_history()
-    set_title(f"loaded {len(self.queue)} URLs {f", {len(self.queue) - pre} new" if pre else ""}")
+    set_title(f"loaded {len(self.queue)} URLs {f', {len(self.queue) - pre} new' if pre else ''}")
 
   def do_save(self: Self, arg: str = "") -> None:
     """
@@ -958,15 +962,15 @@ def strict_dict_update(old: dict, new: dict, path: list[str]) -> None:
     if k in old and isinstance(v, dict):
       strict_dict_update(old[k], v, pth)
     elif k in old and isinstance(v, type(old[k])):
-      logging.info(f"Config {".".join(map(str, pth))} = {v}")
+      logging.info(f"Config {'.'.join(map(str, pth))} = {v}")
       old[k] = v
     elif k in old:
       logging.warning(
-        f"Config {".".join(map(str, pth))} was set to {v} ({type(v)}) but the default is of type ({type(old[k])})"
+        f"Config {'.'.join(map(str, pth))} was set to {v} ({type(v)}) but the default is of type ({type(old[k])})"
       )
       old[k] = v
     else:
-      logging.warning(f"Config {".".join(map(str, pth))} has been loaded but is not present in the default")
+      logging.warning(f"Config {'.'.join(map(str, pth))} has been loaded but is not present in the default")
       old[k] = v
 
 
