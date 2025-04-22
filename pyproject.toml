@@ -3,11 +3,11 @@ name = "PYTDL"
 description = "Python Youtube Downloader: An interactive command-line tool to batch download with yt-dlp"
 version = "2.0.0"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "AlexBlandin" }]
 dependencies = [
-  "yt-dlp[default]>=2024.10.22",
+  "yt-dlp[default]>=2025.3.31",
   "tqdm",
   "attrs",
   "cattrs",
@@ -28,7 +28,7 @@ Source = "https://github.com/alexblandin/PYTDL"
 
 [tool.ruff]
 indent-width = 2
-target-version = "py310"
+target-version = "py311"
 line-length = 120
 
 [tool.ruff.lint]
