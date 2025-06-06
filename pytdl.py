@@ -1,3 +1,25 @@
+#!/usr/bin/env -S uv run --quiet --script
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#   "yt-dlp[default]>=2025.3.31",
+#   "tqdm",
+#   "attrs",
+#   "cattrs",
+#   "ada_url",
+#   "pytomlpp",
+#   "humanize",
+#   "langcodes",
+#   "beautifulsoup4",
+# ]
+# ///
+#
+"""
+A single file Python script requiring only `uv` to run, no Python install required.
+
+Copyright 2025 Alex
+"""
+
 """
 Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
 
@@ -38,7 +60,7 @@ from typing import Any, Literal, Self
 
 import langcodes  # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
 import pytomlpp as toml
-from ada_url import URL
+from ada_url import URL, URLSearchParams
 from humanize import naturaltime
 from tqdm import tqdm
 from yt_dlp import YoutubeDL
@@ -46,15 +68,6 @@ from yt_dlp import YoutubeDL
 # TODO(alex): better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
 # 2: dynamic truncation of fields we can safely truncate (title, etc), so we never lose id etc
-
-RE_YT_VID = re.compile(r"v=[\w_\-]+")
-RE_YT_VID_MANGLED = re.compile(r"/watch&v=[\w_\-]+")
-RE_YT_FLUFF_SI = re.compile(r"[\?&]si=[\w_\-%]+")  # nasty tracking YT added
-RE_YT_FLUFF_TIME = re.compile(r"[\?&]t=\d+s")
-RE_YT_FLUFF_LIST = re.compile(r"[\?&]list=[\w_\-%]+")
-RE_YT_FLUFF_INDEX = re.compile(r"[\?&]index=[\w_\-%]+")
-RE_YT_FLUFF_PP = re.compile(r"[\?&]pp=[\w_\-%]+")
-"`base64.urlsafe_b64decode(urllib.parse.unquote(Match(RE_YT_FLUFF_PP).group(0)))[3:]` is the accompanying search term"
 
 
 class PYTDL(Cmd):
@@ -307,12 +320,7 @@ class PYTDL(Cmd):
 
   def is_url(self: Self, url: str) -> bool:
     """Is this a URL?"""
-    try:
-      _ = URL(url)
-    except ValueError:
-      return False
-    else:
-      return True
+    return URL.can_parse(url)
 
   def url_info(self: Self, url: str) -> dict[str, dict[str, Any] | Any]:
     """Get the infodict for a URL."""
@@ -437,32 +445,36 @@ class PYTDL(Cmd):
     self.writefile(self.history_file, sorted(self.history))
 
   def clean_url(self: Self, url: str):  # noqa: ANN201, C901, D102
-    if "piped.video/" in url or "piped.projectsegfau.lt/" in url:
-      url = url.replace("piped.video/", "youtube.com/", 1).replace("piped.projectsegfau.lt/", "youtube.com/", 1)
-    if "youtube.com" in url or ("youtu.be" in url and "playlist" not in url):
-      # TODO(alex): better system than this, actually semantically extract & discard
-      # for example, to deal with youtu.be/ExampleVid?si=creepytracking
-      # so we just pull out "oh, this is the vid" and discard the rest, really
-      # our current approach is just a "if we defluff and it stays valid, do so"
-      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_LIST, "", url)):
-        url = tmp
-      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_INDEX, "", url)):
-        url = tmp
-      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_PP, "", url)):
-        url = tmp
-      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_SI, "", url)):
-        url = tmp
-      if re.search(RE_YT_VID, tmp := re.sub(RE_YT_FLUFF_TIME, "", url)):
-        url = tmp
-      if re.search(RE_YT_VID_MANGLED, url):
-        url = re.sub(r"/watch&v=", "/watch?v=", url)
-    if "youtube.com/shorts/" in url:
-      url = url.replace("/shorts/", "/watch?v=", 1)
-    if "imgur.artemislena.eu/" in url:
-      if "imgur.artemislena.eu/gallery/" in url:
-        url = url.replace("imgur.artemislena.eu/gallery/", "imgur.com/gallery/", 1)
-      else:
-        url = url.replace("imgur.artemislena.eu/", "i.imgur.com/", 1)
+    if URL.can_parse(url):
+      url = URL(url)
+      # TODO(alex): https://github.com/ClearURLs/Addon
+      if url.hostname in {"m.youtube.com", "www.youtube-nocookie.com", "piped.video", "piped.projectsegfau.lt"}:
+        url.hostname = "youtube.com"
+      if url.hostname in {"youtube.com", "youtu.be"}:
+        if url.pathname not in {"/watch", "/playlist"} and not any(
+          url.pathname.startswith(channel) for channel in ("/@", "/channel/", "/c/", "/user/")
+        ):
+          url.pathname = "/watch"
+          vid = url.pathname.split("/")[-1]
+          url.search = f"v={vid}"
+        if url.search:
+          search = URLSearchParams(url.search)
+          if search.has("vi") and not search.has("v"):
+            search.set("v", search.get("vi"))
+          for key in search.keys():
+            if key not in {"v", "list"}:
+              search.delete(key)
+          if url.pathname != "/playlist":
+            search.delete("list")
+          url.search = str(search)
+      if url.hostname in {"imgur.artemislena.eu"}:
+        if "/gallery/" in url.pathname:
+          url.hostname = "imgur.com"
+        else:
+          url.hostname = "i.imgur.com"
+      url = url.href
+    else:
+      print(f"Was unable to parse {url} as a URL. If you believe this is a bug, bring it up with the WHATWG URL spec.")
     return url
 
   def download(self: Self, raw_url: str) -> None:
@@ -776,7 +788,7 @@ class PYTDL(Cmd):
     else:
       print("No videos to download")  # noqa: T201
     self.update_history()
-    if len(still_live):
+    if still_live:
       self.do_wait(" ".join(still_live))
 
   def do_getall(self: Self, arg: str = "") -> None:
@@ -985,19 +997,19 @@ def unique_list(xs: Iterable) -> list:
 
 
 def yesno(
-  msg: str = "", *, accept_return: bool = True, yes: set[str] | None = None, no: set[str] | None = None
+  msg: str = "", *, accept_return: bool | None = True, yes: set[str] | None = None, no: set[str] | None = None
 ) -> bool:
   """Keep asking until they say yes or no."""
   if no is None:
     no = {"n", "no"}
   if yes is None:
     yes = {"y", "ye", "yes"}
-  fmt = "[Y/n]" if accept_return else "[y/N]"
+  fmt = "[Y/n]" if accept_return else "[y/N]" if accept_return is not None else "[y/n]"
   while True:
     reply = input(f"\r{msg} {fmt}: ").strip().lower()
-    if reply in yes or (accept_return and not reply):
+    if reply in yes or (not reply and accept_return):
       return True
-    if reply in no:
+    if reply in no or (not reply and accept_return is not None):
       return False
 
 
@@ -1015,7 +1027,7 @@ def merge_subs(path: Path = Path()) -> None:
   """Merge .ass subtitles into .mp4 videos non-destructively (by switching to .mkv)."""
   vids = list(filter(Path.is_file, path.rglob("*.mp4")))
   subs = list(filter(Path.is_file, path.rglob("*.ass")))
-  _pair: dict[Path, Path | None] = {vid: None for vid in vids}
+  _pair: dict[Path, Path | None] = dict.fromkeys(vids)
   lang = {}
   for sub in subs:
     suffix = next(filter(langcodes.tag_is_valid, (s.removeprefix(".") for s in sub.suffixes)), None)
