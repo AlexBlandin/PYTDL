@@ -454,7 +454,7 @@ class PYTDL(Cmd):
           url.search = str(search)
           url.pathname = "/watch"
         url.hostname = "youtube.com"
-      if url.hostname in {"youtube.com"}:
+      if url.hostname in {"youtube.com", "www.youtube.com"}:
         if url.pathname not in {"/watch", "/playlist"} and not any(
           url.pathname.startswith(channel) for channel in ("/@", "/channel/", "/c/", "/user/")
         ):
