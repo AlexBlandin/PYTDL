@@ -448,9 +448,13 @@ class PYTDL(Cmd):
     if URL.can_parse(url):
       url = URL(url)
       # TODO(alex): https://github.com/ClearURLs/Addon
-      if url.hostname in {"m.youtube.com", "www.youtube-nocookie.com", "piped.video", "piped.projectsegfau.lt"}:
+      if url.hostname in {"youtu.be", "m.youtube.com", "www.youtube-nocookie.com", "piped.video", "piped.projectsegfau.lt"}:
+        if url.hostname in {"youtu.be"}:
+          search = URLSearchParams(f"v={url.pathname.removeprefix('/')}")
+          url.search = str(search)
+          url.pathname = "/watch"
         url.hostname = "youtube.com"
-      if url.hostname in {"youtube.com", "youtu.be"}:
+      if url.hostname in {"youtube.com"}:
         if url.pathname not in {"/watch", "/playlist"} and not any(
           url.pathname.startswith(channel) for channel in ("/@", "/channel/", "/c/", "/user/")
         ):
