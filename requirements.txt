@@ -44,7 +44,7 @@ pycryptodomex==3.20.0
     # via yt-dlp
 pytomlpp==1.0.13
     # via pytdl (pyproject.toml)
-requests==2.32.3
+requests==2.32.4
     # via yt-dlp
 setuptools==70.2.0
     # via marisa-trie
@@ -58,5 +58,5 @@ urllib3==2.2.2
     #   yt-dlp
 websockets==13.1
     # via yt-dlp
-yt-dlp==2025.3.31
+yt-dlp==2025.6.9
     # via pytdl (pyproject.toml)
