@@ -44,7 +44,6 @@ import logging.config
 import logging.handlers
 import os
 import platform
-import re
 import sys
 from cmd import Cmd
 from collections import ChainMap
@@ -448,13 +447,20 @@ class PYTDL(Cmd):
     if URL.can_parse(url):
       url = URL(url)
       # TODO(alex): https://github.com/ClearURLs/Addon
-      if url.hostname in {"youtu.be", "m.youtube.com", "www.youtube-nocookie.com", "piped.video", "piped.projectsegfau.lt"}:
+      if url.hostname in {
+        "youtube.com",
+        "youtu.be",
+        "m.youtube.com",
+        "www.youtube-nocookie.com",
+        "piped.video",
+        "piped.projectsegfau.lt",
+      }:
         if url.hostname in {"youtu.be"}:
           search = URLSearchParams(f"v={url.pathname.removeprefix('/')}")
           url.search = str(search)
           url.pathname = "/watch"
-        url.hostname = "youtube.com"
-      if url.hostname in {"youtube.com", "www.youtube.com"}:
+        url.hostname = "www.youtube.com"
+      if url.hostname in {"www.youtube.com"}:
         if url.pathname not in {"/watch", "/playlist"} and not any(
           url.pathname.startswith(channel) for channel in ("/@", "/channel/", "/c/", "/user/")
         ):
