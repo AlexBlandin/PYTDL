@@ -385,31 +385,57 @@ class PYTDL(Cmd):
         return info["is_live"]
     return False
 
-  def is_podcast(self: Self, url: str) -> bool:
+  def is_podcast(self: Self, url: str | URL) -> bool:
     """Is a URL a podcast?"""
-    return "podcast" in url
+    url = URL(str(url))
+    return "podcast" in str(url)  # TODO(alex): this is very basic
 
-  def is_crunchyroll(self: Self, url: str) -> bool:
+  def is_crunchyroll(self: Self, url: str | URL) -> bool:
     """Is a URL for Crunchyroll?"""
-    return "crunchyroll" in URL(url).hostname
+    url = URL(str(url))
+    return url.hostname in {
+      "crunchyroll.com",
+      "www.crunchyroll.com",
+    }
 
-  def is_nebula(self: Self, url: str) -> bool:
+  def is_nebula(self: Self, url: str | URL) -> bool:
     """Is a URL for nebula.tv?"""
-    return "nebula.tv" in URL(url).hostname
+    url = URL(str(url))
+    return url.hostname in {
+      "nebula.tv",
+      "www.nebula.tv",
+    }
 
-  def is_twitch(self: Self, url: str) -> bool:
+  def is_twitch(self: Self, url: str | URL) -> bool:
     """Is a URL for twitch.tv?"""
-    return "twitch.tv" in URL(url).hostname
+    url = URL(str(url))
+    return url.hostname in {
+      "twitch.tv",
+      "www.twitch.tv",
+    }
 
-  def is_twitter(self: Self, url: str) -> bool:
+  def is_twitter(self: Self, url: str | URL) -> bool:
     """Is a URL for twitter.com?"""
-    return "twitter.com" in URL(url).hostname or "x.com" in URL(url).hostname
+    url = URL(str(url))
+    return url.hostname in {
+      "twitter.com",
+      "www.twitter.com",
+      "x.com",
+      "www.x.com",
+    }
 
-  def is_youtube(self: Self, url: str) -> bool:
+  def is_youtube(self: Self, url: str | URL) -> bool:
     """Is a URL for Youtube?"""
-    hostname = URL(url).hostname
-    frontends = ("youtube.com", "youtu.be", "piped.video", "piped.projectsegfau.lt")
-    return any(frontend in hostname for frontend in frontends)
+    url = URL(str(url))
+    return url.hostname in {
+      "www.youtube.com",
+      "youtube.com",
+      "youtu.be",
+      "m.youtube.com",
+      "www.youtube-nocookie.com",
+      "piped.video",
+      "piped.projectsegfau.lt",
+    }
 
   #########
   ## I/O ##
@@ -443,27 +469,17 @@ class PYTDL(Cmd):
     self.history |= set(self.readfile(self.history_file))
     self.writefile(self.history_file, sorted(self.history))
 
-  def clean_url(self: Self, url: str):  # noqa: ANN201, C901, D102
-    if URL.can_parse(url):
-      url = URL(url)
-      # TODO(alex): https://github.com/ClearURLs/Addon
-      if url.hostname in {
-        "youtube.com",
-        "youtu.be",
-        "m.youtube.com",
-        "www.youtube-nocookie.com",
-        "piped.video",
-        "piped.projectsegfau.lt",
-      }:
+  def clean_url(self: Self, url: str | URL):  # noqa: ANN201, C901, D102
+    # TODO(alex): https://github.com/ClearURLs/Addon
+    if isinstance(url, URL) or URL.can_parse(url):
+      url = URL(str(url))
+      if self.is_youtube(url):
         if url.hostname in {"youtu.be"}:
           search = URLSearchParams(f"v={url.pathname.removeprefix('/')}")
           url.search = str(search)
           url.pathname = "/watch"
         url.hostname = "www.youtube.com"
-      if url.hostname in {"www.youtube.com"}:
-        if url.pathname not in {"/watch", "/playlist"} and not any(
-          url.pathname.startswith(channel) for channel in ("/@", "/channel/", "/c/", "/user/")
-        ):
+        if not any(url.pathname.startswith(pn) for pn in ("/watch", "/playlist", "/@", "/channel/", "/c/", "/user/")):
           url.pathname = "/watch"
           vid = url.pathname.split("/")[-1]
           url.search = f"v={vid}"
@@ -477,7 +493,11 @@ class PYTDL(Cmd):
           if url.pathname != "/playlist":
             search.delete("list")
           url.search = str(search)
-      if url.hostname in {"imgur.artemislena.eu"}:
+      elif self.is_twitch(url):
+        # clean "www.twitch.tv/videos/1234567890?filter=archives&sort=time" -> "www.twitch.tv/videos/1234567890"
+        if url.search and url.pathname.startswith("/videos/"):
+          url.search = ""
+      elif url.hostname in {"imgur.artemislena.eu"}:
         if "/gallery/" in url.pathname:
           url.hostname = "imgur.com"
         else:
@@ -694,7 +714,7 @@ class PYTDL(Cmd):
         else:
           print(p)  # noqa: T201
 
-  def do_add(self: Self, arg: str, *, check_supported: bool = False) -> None:
+  def do_add(self: Self, arg: str, *, allow_unsupported: bool = False) -> None:
     """
     Add a url to the list (space separated for multiple):
 
@@ -706,9 +726,10 @@ class PYTDL(Cmd):
         arg = q[1]
         temp = dict(self.queue)
         self.queue = {}
+      # TODO(alex): better valid URL check, fix common input errors (https://a.bchttps://c.de, missing http, etc)
       for url in arg.split():
-        # TODO(alex): valid URL check, common typo fixes (https://a.bchttps://c.de, etc)
-        if len(url) > 4 and (not check_supported or self.is_supported(url)):  # noqa: PLR2004
+        if len(url) > 4 and (allow_unsupported or self.is_supported(url)):  # noqa: PLR2004
+          url = self.clean_url(url)
           self.queue[url] = url
     if temp:
       self.queue |= temp
@@ -812,7 +833,7 @@ class PYTDL(Cmd):
       self.do_load(arg)
     self.do_get(list(self.queue))
 
-  def do_load(self: Self, arg: str = "", *, check_supported: bool = True) -> None:
+  def do_load(self: Self, arg: str = "", *, allow_unsupported: bool = False) -> None:
     """
     Load the contents of a file into the queue (add a - to not load the history):
 
@@ -824,7 +845,7 @@ class PYTDL(Cmd):
     if len(path) == 0 or not Path(path).expanduser().is_file():
       path = self.queue_file
     for line in self.readfile(path):
-      self.do_add(line, check_supported=check_supported)
+      self.do_add(line, allow_unsupported=allow_unsupported)
     post = len(self.queue)
     if post > pre:
       print(f"Added {post - pre} URLs from {path}")  # noqa: T201
@@ -943,7 +964,7 @@ class PYTDL(Cmd):
     self.do_config()
     self.do_config()  # in case of redirection
     logging.debug(f"Config file loaded ({self.config_file})")
-    self.do_load(check_supported=False)
+    self.do_load(allow_unsupported=True)
     self.do_mode()
 
   #########################
