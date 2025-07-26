@@ -186,7 +186,12 @@ class PYTDL(Cmd):
       "windowsfilenames": True,
       "consoletitle": True,  # dlp sets progress in the console title
     },
-    "audio": {"format": "bestaudio/best", "postprocessors": [{"key": "FFmpegExtractAudio"}]},
+    "audio": {
+      "format": "bestaudio/best",
+      "postprocessors": [
+        {"key": "FFmpegExtractAudio"},
+      ],
+    },
     "captions": {
       "allsubtitles": True,
       "skip_download": True,
@@ -241,10 +246,16 @@ class PYTDL(Cmd):
       "embed_thumbnail": True,
       "subtitleslangs": ["en", "eng", "gb", "enGB", "enUK", "enUS", "en-GB", "en-UK", "en-US"],
       "writesubtitles": True,
+      "postprocessors": [
+        {"key": "FFmpegEmbedSubtitle"},  # --embed-subs
+      ],
     },
     "crunchyroll": {  # doesn't work currently as there's no way to pass user-agent
       "subtitleslangs": ["en-US"],
       "writesubtitles": True,
+      "postprocessors": [
+        {"key": "FFmpegEmbedSubtitle"},  # --embed-subs
+      ],
       "username": secrets["crunchyroll"]["username"],
       "password": secrets["crunchyroll"]["password"],
       "cookiefile": str(cookies / "crunchyroll.txt"),
@@ -461,8 +472,7 @@ class PYTDL(Cmd):
 
   def writefile(self: Self, path: str | Path, lines: list[str]) -> None:
     """Writes lines to a file."""
-    f = Path(path).expanduser()
-    f.write_text("\n".join(unique_list(map(self.clean_url, filter(None, lines)))), encoding="utf8", newline="\n")
+    writelines(path, unique_list(map(self.clean_url, filter(None, lines))))
 
   def update_history(self: Self) -> None:
     """Update the history file."""
@@ -714,7 +724,7 @@ class PYTDL(Cmd):
         else:
           print(p)  # noqa: T201
 
-  def do_add(self: Self, arg: str, *, allow_unsupported: bool = False) -> None:
+  def do_add(self: Self, arg: str, *, allow_unsupported: bool = True) -> None:
     """
     Add a url to the list (space separated for multiple):
 
@@ -833,7 +843,7 @@ class PYTDL(Cmd):
       self.do_load(arg)
     self.do_get(list(self.queue))
 
-  def do_load(self: Self, arg: str = "", *, allow_unsupported: bool = False) -> None:
+  def do_load(self: Self, arg: str = "", *, allow_unsupported: bool = True) -> None:
     """
     Load the contents of a file into the queue (add a - to not load the history):
 
@@ -1024,7 +1034,23 @@ def set_title(s: str) -> None:
 
 def unique_list(xs: Iterable) -> list:
   """Reduce a list to only its unique elements `[1,1,2,7,2,4] -> [1,2,7,4]`."""
-  return list(dict(zip(xs, it.repeat(0))))
+  return list(dict.fromkeys(xs))
+
+
+def writelines(
+  fp: str | Path,
+  lines: str | list[str],
+  *,
+  mode: str = "w+",
+  encoding: str = "utf8",
+  newline: str = "\n",
+) -> None:
+  """Just writes lines as you normally would want to."""
+  with Path(fp).resolve().open(mode=mode, encoding=encoding, newline=newline) as f:
+    if isinstance(lines, str):
+      f.write(f"{lines}\n")
+    else:
+      f.writelines(f"{line}{newline}" for line in lines)
 
 
 def yesno(
