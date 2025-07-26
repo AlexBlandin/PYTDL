@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "yt-dlp[default]>=2025.3.31",
+#   "yt-dlp[default,curl-cffi]>=2025.7.21",
 #   "tqdm",
 #   "attrs",
 #   "cattrs",
