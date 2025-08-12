@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "yt-dlp[default,curl-cffi]>=2025.7.21",
+#   "yt-dlp[default,curl-cffi]>=2025.08.11",
 #   "tqdm",
 #   "attrs",
 #   "cattrs",
@@ -63,6 +63,7 @@ from ada_url import URL, URLSearchParams
 from humanize import naturaltime
 from tqdm import tqdm
 from yt_dlp import YoutubeDL
+from yt_dlp.version import __version__ as YTDLPVersion
 
 # TODO(alex): better outtmpl approach, so we can have
 # 1: optional fields without added whitespace
@@ -514,7 +515,7 @@ class PYTDL(Cmd):
           url.hostname = "i.imgur.com"
       url = url.href
     else:
-      print(f"Was unable to parse {url} as a URL. If you believe this is a bug, bring it up with the WHATWG URL spec.")
+      print(f"Was unable to parse {url!r} as a URL. If you believe this is a bug, bring it up with the WHATWG URL spec.")
     return url
 
   def download(self: Self, raw_url: str) -> None:
@@ -555,6 +556,7 @@ class PYTDL(Cmd):
     def yesify(b: bool, /) -> Literal["Yes", "No"]:  # noqa: FBT001
       return "Yes" if b else "No"
 
+    print("Version:", YTDLPVersion)  # noqa: T201
     print("Mode:", "Idle" if self.is_idle else "Interactive")  # noqa: T201
     print("ASCII:", yesify(self.is_ascii))  # noqa: T201
     print("Quiet:", yesify(self.is_quiet))  # noqa: T201
@@ -629,12 +631,12 @@ class PYTDL(Cmd):
     self.is_quiet = not self.is_quiet
     print("Shh" if self.is_quiet else "BOO!")  # noqa: T201
 
-  def do_dated(self: Self, _arg: str = "") -> None:
+  def do_date(self: Self, _arg: str = "") -> None:
     """Toggle whether PYTDL dates videos by default."""
     self.is_dated = not self.is_dated
     print("Dating now" if self.is_dated else "Dateless...")  # noqa: T201
 
-  def do_forced(self: Self, _arg: str = "") -> None:
+  def do_force(self: Self, _arg: str = "") -> None:
     """Toggle whether to force redownloads of videos."""
     self.is_forced = not self.is_forced
     print("Force downloads" if self.is_forced else "Doesn't force downloads")  # noqa: T201
