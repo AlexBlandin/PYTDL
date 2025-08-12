@@ -12,6 +12,8 @@ queues/
 # Dev files
 info/
 
+*.code-workspace
+
 # ---> Python
 requirements.txt
 requirements-*.txt
