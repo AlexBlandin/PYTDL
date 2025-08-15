@@ -7,7 +7,7 @@
 #   "attrs",
 #   "cattrs",
 #   "ada_url",
-#   "pytomlpp",
+#   "rtoml",
 #   "humanize",
 #   "langcodes",
 #   "beautifulsoup4",
@@ -30,7 +30,7 @@ Requirements:
 - attrs: https://pypi.org/project/attrs/
 - cattrs: https://pypi.org/project/cattrs/
 - ada_url: https://pypi.org/project/ada-url/
-- pytomlpp: https://pypi.org/project/pytomlpp/
+- rtoml: https://pypi.org/project/rtoml/
 - humanize: https://pypi.org/project/humanize/
 - langcodes: https://pypi.org/project/langcodes/
 
@@ -58,7 +58,7 @@ from time import sleep
 from typing import Any, Literal, Self
 
 import langcodes  # used to convert IETF BCP 47 (i.e., Crunchyroll's en-US) to ISO 639-2 (for ffmpeg)
-import pytomlpp as toml
+import rtoml
 from ada_url import URL, URLSearchParams
 from humanize import naturaltime
 from tqdm import tqdm
@@ -124,7 +124,7 @@ class PYTDL(Cmd):
   "Where to save download history"
   config_file: str | Path = local / "config.toml"
   "Configuration file to load"
-  secrets: str | Path | dict[str, str | dict[str, str]] = toml.load(local / "secrets.toml")
+  secrets: str | Path | dict[str, str | dict[str, str]] = rtoml.load(local / "secrets.toml")
   "Where to load secrets (usernames/passwords, etc)"
 
   fmt_timestamp = "%(timestamp>%Y-%m-%d-%H-%M-%S,release_date>%Y-%m-%d,upload_date>%Y-%m-%d|20xx-xx-xx)s"
@@ -573,7 +573,7 @@ class PYTDL(Cmd):
     config | config [path]
     """
     arg = Path(arg).expanduser()
-    config = toml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
+    config = rtoml.load(arg if arg.is_file() else Path(self.config_file).expanduser())
 
     assert self.__annotations__ == self.__class__.__annotations__  # no shennanigans... for now  # noqa: S101
     for key, t in self.__annotations__.items():  # initialise annotated types
@@ -606,9 +606,9 @@ class PYTDL(Cmd):
     # self.secrets must be a dict as if loaded from TOML
     match self.secrets:
       case str(secrets_file):
-        self.secrets = toml.load(Path(secrets_file))
+        self.secrets = rtoml.load(Path(secrets_file))
       case Path() as secrets_file:
-        self.secrets = toml.load(Path(secrets_file))
+        self.secrets = rtoml.load(Path(secrets_file))
       case dict(secrets):
         pass
       case _:

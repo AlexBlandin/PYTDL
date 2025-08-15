@@ -1,14 +1,17 @@
+
 # PYTDL
+
 Python YouTube Downloader: An interactive command-line tool to batch download with [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
 
 ## Requirements
+
 - [`pip install -r requirements.txt`](https://www.python.org/)
   - [regenerate with `uv pip compile pyproject.toml -o requirements.txt`](https://github.com/astral-sh/uv)
   - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp)
     + [`ffmpeg`](https://ffmpeg.org)
     + [`phantomjs`](https://github.com/ariya/phantomjs) (optional)
   - [`tqdm`](https://github.com/tqdm/tqdm)
-  - [`pytomlpp`](https://pypi.org/project/pytomlpp/)
+  - [`rtoml`](https://pypi.org/project/rtoml/)
   - [`humanize`](https://github.com/jmoiron/humanize)
   - [`langcodes`](https://pypi.org/project/langcodes/)
 

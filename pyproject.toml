@@ -9,10 +9,10 @@ authors = [{ name = "AlexBlandin" }]
 dependencies = [
   "yt-dlp[default,curl-cffi]>=2025.08.11",
   "tqdm",
+  "rtoml",
   "attrs",
   "cattrs",
   "ada_url",
-  "pytomlpp",
   "humanize",
   "langcodes",
   "beautifulsoup4",
