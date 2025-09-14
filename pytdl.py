@@ -1,8 +1,8 @@
-#!/usr/bin/env -S uv run --quiet --script
+#!/usr/bin/env -S uv run -qqs
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
-#   "yt-dlp[default,curl-cffi]>=2025.08.11",
+#   "yt-dlp[default,curl-cffi]>=2025.09.05",
 #   "tqdm",
 #   "attrs",
 #   "cattrs",
@@ -14,12 +14,6 @@
 # ]
 # ///
 #
-"""
-A single file Python script requiring only `uv` to run, no Python install required.
-
-Copyright 2025 Alex
-"""
-
 """
 Python YouTube Downloader: An interactive command-line tool to batch download with yt-dlp.
 
@@ -37,7 +31,6 @@ Requirements:
 Copyright 2019 Alex Blandin
 """
 
-import itertools as it
 import json
 import logging  # TODO(alex): actually use logging.warning() etc now
 import logging.config
@@ -515,7 +508,9 @@ class PYTDL(Cmd):
           url.hostname = "i.imgur.com"
       url = url.href
     else:
-      print(f"Was unable to parse {url!r} as a URL. If you believe this is a bug, bring it up with the WHATWG URL spec.")
+      print(
+        f"Was unable to parse {url!r} as a URL. If you believe this is a bug, bring it up with the WHATWG URL spec."
+      )
     return url
 
   def download(self: Self, raw_url: str) -> None:
@@ -806,7 +801,7 @@ class PYTDL(Cmd):
     """  # noqa: D415
     still_live, urls = [], arg.split() if isinstance(arg, str) else arg
     urls = list(map(self.clean_url, urls))
-    if len(urls):
+    if urls:
       set_title(f"downloading {len(urls)} URL{'s' * (len(urls) != 1)}")
       print(f"Getting {len(urls)} URL{'s' * (len(urls) != 1)}")  # noqa: T201
       try:
@@ -895,7 +890,7 @@ class PYTDL(Cmd):
       urls = list(self.queue)
     elapsed, intervals = 0, [10, 30, 60]
     wait_next = list(zip(intervals, intervals[1:] + [3600 * 24], strict=True))
-    while len(urls):
+    while urls:
       url = urls.pop(0)
       set_title(f"waiting on {url}")
       if self.is_live(url):

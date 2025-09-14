@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "AlexBlandin" }]
 dependencies = [
-  "yt-dlp[default,curl-cffi]>=2025.08.11",
+  "yt-dlp[default,curl-cffi]>=2025.09.05",
   "tqdm",
   "rtoml",
   "attrs",
@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "pdbp", "basedmypy", "basedpyright"]
+dev = ["ruff"]
 
 [project.urls]
 Documentation = "https://github.com/alexblandin/PYTDL#readme"
