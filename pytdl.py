@@ -1,8 +1,8 @@
 #!/usr/bin/env -S uv run -qqs
 # /// script
-# requires-python = ">=3.11"
+# requires-python = ">=3.12"
 # dependencies = [
-#   "yt-dlp[default,curl-cffi]>=2025.09.26",
+#   "yt-dlp[default,curl-cffi]>=2025.11.12",
 #   "tqdm",
 #   "attrs",
 #   "cattrs",

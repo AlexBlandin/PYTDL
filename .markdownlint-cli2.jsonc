@@ -3,7 +3,7 @@
     "heading-increment": false,
     "heading-style": {"style": "atx"},
     "ul-style": {"style": "dash"},
-    "line-length": false,
+    "line-length": {"code_blocks": false, "headings": false, "stern": true, "tables": false},
     "commands-show-output": false,
     "no-duplicate-heading": false,
     "single-title": false,

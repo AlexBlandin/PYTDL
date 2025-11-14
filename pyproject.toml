@@ -1,58 +1,75 @@
 [project]
 name = "PYTDL"
+version = "3.0.0"
 description = "Python Youtube Downloader: An interactive command-line tool to batch download with yt-dlp"
-version = "2.0.0"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = "MIT"
-authors = [{ name = "AlexBlandin" }]
-dependencies = [
-  "yt-dlp[default,curl-cffi]>=2025.09.05",
-  "tqdm",
-  "rtoml",
-  "attrs",
-  "cattrs",
-  "ada_url",
-  "humanize",
-  "langcodes",
-  "beautifulsoup4",
+authors = [
+  { name = "AlexBlandin", email = "20842735+AlexBlandin@users.noreply.github.com" },
 ]
-
-[project.optional-dependencies]
-dev = ["ruff"]
+dependencies = [
+  "ada_url>=1.13.0",
+  "attrs>=23.2.0",
+  "beautifulsoup4>=4.12.3",
+  "cattrs>=23.2.3",
+  "humanize>=4.1.0",
+  "langcodes>=3.4.0",
+  "rtoml>=0.12.0",
+  "textual>=6.2.1",
+  "textual-speedups>=0.2.0",
+  "tqdm>=4.66.4",
+  "yt-dlp[default,curl-cffi]>=2025.11.12",
+]
 
 [project.urls]
 Documentation = "https://github.com/alexblandin/PYTDL#readme"
 Issues = "https://github.com/alexblandin/PYTDL/issues"
 Source = "https://github.com/alexblandin/PYTDL"
 
+[dependency-groups]
+dev = [
+  "ruff>=0.14.0",
+  "textual-dev>=1.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyt_dl"]
+
 [tool.ruff]
 indent-width = 2
-target-version = "py311"
+target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "G004",   # simple f-string logging is fine
-  "ERA",    # code comments actually help
+  "G004",  # simple f-string logging is fine
+  "ERA",  # code comments actually help
   "TD003",  # not using github to track todo/issues
-  "S311",   # I know when to use secrets
-  # "T20",    # print is good, actually 
-  "D202",   # a little vertical separation can be nice
-  "W191",   # ruff format
-  "E111",   # ruff format
-  "E114",   # ruff format
-  "E117",   # ruff format
-  "E203",   # ruff format
-  "D206",   # ruff format
-  "D212",   # ruff format
-  "D300",   # ruff format
-  "Q",      # ruff format
-  "COM812", # ruff format
-  "COM819", # ruff format
-  "ISC001", # ruff format
-  "ISC002", # ruff format
+  "S311",  # I know when to use secrets
+  # "T20",    # print is good, actually
+  "D202",  # a little vertical separation can be nice
+  "W191",  # ruff format
+  "E111",  # ruff format
+  "E114",  # ruff format
+  "E117",  # ruff format
+  "E203",  # ruff format
+  "D206",  # ruff format
+  "D212",  # ruff format
+  "D300",  # ruff format
+  "Q",  # ruff format
+  "COM812",  # ruff format
+  "COM819",  # ruff format
+  "ISC001",  # ruff format
+  "ISC002",  # ruff format
 ]
 
 [tool.ruff.lint.pydocstyle]
